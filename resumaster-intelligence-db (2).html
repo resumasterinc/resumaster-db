@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ResuMaster — Intelligence Database</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=IBM+Plex+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#070709;--surface:#0e0e12;--surface2:#14141a;--border:#1c1c26;--border2:#252530;
+  --text:#e8e8f0;--muted:#4a4a60;--muted2:#6a6a80;--green:#22c55e;--green-dim:#0f2a1a;
+  --lime:#84cc16;--purple:#a855f7;--amber:#f59e0b;--sky:#38bdf8;--pink:#f472b6;--red:#f87171;
+}
+body{background:var(--bg);color:var(--text);font-family:'IBM Plex Mono',monospace;min-height:100vh;}
+nav{display:flex;align-items:center;justify-content:space-between;padding:20px 32px;border-bottom:1px solid var(--border);position:sticky;top:0;background:rgba(7,7,9,.95);backdrop-filter:blur(12px);z-index:100;}
+.nav-brand{display:flex;flex-direction:column;}
+.nav-logo{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:#fff;letter-spacing:-0.5px;}
+.nav-sub{font-size:9px;letter-spacing:4px;color:var(--muted);text-transform:uppercase;margin-top:2px;}
+.nav-tabs{display:flex;gap:4px;}
+.nav-tab{padding:8px 18px;border-radius:4px;border:1px solid transparent;background:transparent;color:var(--muted2);font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:1px;cursor:pointer;text-transform:uppercase;transition:all .15s;}
+.nav-tab:hover{color:var(--text);border-color:var(--border2);}
+.nav-tab.active{background:var(--green-dim);border-color:var(--green);color:var(--green);}
+.nav-right{display:flex;align-items:center;gap:20px;}
+.nav-stat{display:flex;flex-direction:column;align-items:flex-end;}
+.nav-stat-num{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--green);}
+.nav-stat-label{font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;}
+.sync-indicator{font-size:10px;color:var(--muted);}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:var(--green);display:inline-block;margin-right:5px;}
+.sync-dot.syncing{animation:pulse 1s infinite;}
+.sync-dot.err{background:var(--red);}
+.page{display:none;padding:32px;}
+.page.active{display:block;}
+.scraper-layout{display:grid;grid-template-columns:360px 1fr;gap:24px;max-width:1400px;}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:24px;}
+.panel-title{font-size:10px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-bottom:20px;}
+.field{margin-bottom:16px;}
+.label{font-size:9px;letter-spacing:2px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;display:block;}
+input,select{width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:4px;padding:9px 12px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:12px;outline:none;transition:border-color .15s;}
+input:focus,select:focus{border-color:var(--muted2);}
+select option{background:var(--bg);}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.chip-row{display:flex;flex-wrap:wrap;gap:6px;}
+.chip{padding:5px 12px;border-radius:4px;border:1px solid var(--border2);background:var(--bg);color:var(--muted2);font-family:'IBM Plex Mono',monospace;font-size:10px;cursor:pointer;transition:all .15s;}
+.chip.active{border-color:var(--green);background:var(--green-dim);color:var(--green);}
+.run-btn{width:100%;padding:13px;background:var(--green);color:#000;border:none;border-radius:4px;font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:12px;letter-spacing:2px;cursor:pointer;text-transform:uppercase;margin-top:8px;transition:background .15s;}
+.run-btn:disabled{background:var(--surface2);color:var(--muted);cursor:not-allowed;}
+.run-btn:not(:disabled):hover{background:#16a34a;}
+.status-box{border-radius:6px;padding:11px 16px;font-size:11px;margin-bottom:16px;display:none;}
+.status-ok{background:var(--green-dim);border:1px solid #166534;color:var(--green);}
+.status-err{background:#1a0a0a;border:1px solid #7f1d1d;color:var(--red);}
+.pulse{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green);margin-right:8px;animation:pulse 1s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.results-panel{display:none;}
+.kw-section{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:18px;margin-bottom:10px;}
+.kw-section-title{font-size:9px;font-weight:700;letter-spacing:3px;margin-bottom:12px;text-transform:uppercase;}
+.badges{display:flex;flex-wrap:wrap;gap:4px;}
+.badge{border-radius:4px;padding:4px 10px;display:inline-flex;align-items:center;gap:7px;border:1px solid;}
+.badge-kw{font-size:11px;color:var(--text);}
+.badge-pct{font-size:10px;}
+.bottom-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:10px;}
+.save-bar{background:var(--surface2);border:1px solid var(--green);border-radius:8px;padding:16px 20px;margin-bottom:16px;display:none;align-items:center;justify-content:space-between;}
+.save-info{font-size:11px;color:var(--muted2);}
+.save-info strong{color:var(--text);}
+.btn-green{padding:9px 22px;background:var(--green);color:#000;border:none;border-radius:4px;font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:11px;letter-spacing:1px;cursor:pointer;text-transform:uppercase;}
+.btn-green:hover{background:#16a34a;}
+.btn-outline{padding:9px 22px;background:transparent;color:var(--green);border:1px solid var(--green);border-radius:4px;font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:11px;letter-spacing:1px;cursor:pointer;text-transform:uppercase;}
+.btn-outline:hover{background:var(--green-dim);}
+.db-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;}
+.db-title{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;color:#fff;}
+.db-controls{display:flex;gap:10px;align-items:center;}
+.search-input{background:var(--surface);border:1px solid var(--border2);border-radius:4px;padding:9px 14px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:12px;outline:none;width:240px;}
+.search-input:focus{border-color:var(--muted2);}
+.filter-select{background:var(--surface);border:1px solid var(--border2);border-radius:4px;padding:9px 12px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:11px;outline:none;cursor:pointer;}
+.industry-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;margin-bottom:32px;}
+.industry-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:20px;cursor:pointer;transition:all .15s;position:relative;overflow:hidden;}
+.industry-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;opacity:0;transition:opacity .15s;}
+.industry-card:hover::before{opacity:1;}
+.industry-card[data-industry="healthcare"]::before{background:var(--sky);}
+.industry-card[data-industry="finance"]::before{background:var(--green);}
+.industry-card[data-industry="tech"]::before{background:var(--purple);}
+.industry-card[data-industry="admin"]::before{background:var(--amber);}
+.industry-card[data-industry="marketing"]::before{background:var(--pink);}
+.industry-card[data-industry="hr"]::before{background:#f97316;}
+.industry-card[data-industry="consulting"]::before{background:var(--lime);}
+.industry-card[data-industry="trades"]::before{background:var(--red);}
+.industry-card[data-industry="sales"]::before{background:#06b6d4;}
+.industry-card[data-industry="legal"]::before{background:#8b5cf6;}
+.industry-card[data-industry="general"]::before{background:var(--muted2);}
+.ic-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;}
+.ic-name{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:#fff;}
+.ic-count{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;line-height:1;}
+.ic-count-label{font-size:9px;color:var(--muted);letter-spacing:2px;text-align:right;}
+.ic-roles{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px;}
+.ic-role-chip{font-size:9px;padding:3px 8px;border-radius:3px;background:var(--surface2);border:1px solid var(--border);color:var(--muted2);}
+.ic-meta{font-size:9px;color:var(--muted);letter-spacing:1px;}
+.records-section{margin-top:16px;}
+.records-title{font-size:10px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-bottom:12px;}
+.record-row{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:16px 18px;margin-bottom:8px;display:flex;align-items:center;gap:16px;cursor:pointer;transition:all .15s;}
+.record-row:hover{border-color:var(--border2);background:var(--surface2);}
+.rr-industry{width:110px;font-size:9px;letter-spacing:2px;text-transform:uppercase;}
+.rr-role{flex:1;font-size:13px;color:var(--text);}
+.rr-postings{font-size:11px;color:var(--muted2);width:90px;text-align:right;}
+.rr-date{font-size:10px;color:var(--muted);width:90px;text-align:right;}
+.rr-delete{padding:5px 10px;background:transparent;border:1px solid #7f1d1d;border-radius:3px;color:var(--red);font-size:10px;cursor:pointer;font-family:'IBM Plex Mono',monospace;opacity:0;transition:opacity .15s;}
+.record-row:hover .rr-delete{opacity:1;}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);backdrop-filter:blur(4px);z-index:200;display:none;align-items:flex-start;justify-content:center;padding:40px 20px;overflow-y:auto;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:10px;width:100%;max-width:900px;padding:32px;}
+.modal-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;}
+.modal-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:#fff;}
+.modal-meta{font-size:10px;color:var(--muted);margin-top:4px;letter-spacing:1px;}
+.modal-close{background:transparent;border:1px solid var(--border2);border-radius:4px;color:var(--muted2);font-family:'IBM Plex Mono',monospace;font-size:11px;padding:7px 14px;cursor:pointer;}
+.modal-close:hover{border-color:var(--muted2);color:var(--text);}
+.modal-actions{display:flex;gap:8px;margin-bottom:24px;}
+.copy-area{background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:16px;font-size:11px;color:var(--muted2);line-height:1.7;white-space:pre-wrap;max-height:200px;overflow-y:auto;display:none;margin-bottom:16px;}
+.intel-header{margin-bottom:32px;}
+.intel-title{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;color:#fff;margin-bottom:6px;}
+.intel-sub{font-size:11px;color:var(--muted);}
+.intel-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px;}
+.intel-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:24px;}
+.intel-card-title{font-size:9px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-bottom:16px;}
+.kw-rank-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border);}
+.kw-rank-row:last-child{border-bottom:none;}
+.kw-rank-num{font-size:10px;color:var(--muted);width:20px;}
+.kw-rank-word{flex:1;font-size:12px;color:var(--text);}
+.kw-rank-bar-wrap{width:120px;height:4px;background:var(--border2);border-radius:2px;overflow:hidden;}
+.kw-rank-bar{height:100%;border-radius:2px;background:var(--green);}
+.kw-rank-count{font-size:10px;color:var(--muted2);width:35px;text-align:right;}
+.industry-breakdown{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;}
+.ib-card{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:14px;}
+.ib-name{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);margin-bottom:6px;}
+.ib-num{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;color:#fff;}
+.ib-sub{font-size:9px;color:var(--muted);}
+.ind-healthcare{color:var(--sky);}
+.ind-finance{color:var(--green);}
+.ind-tech{color:var(--purple);}
+.ind-admin{color:var(--amber);}
+.ind-marketing{color:var(--pink);}
+.ind-hr{color:#f97316;}
+.ind-consulting{color:var(--lime);}
+.ind-trades{color:var(--red);}
+.ind-sales{color:#06b6d4;}
+.ind-legal{color:#8b5cf6;}
+.ind-general{color:var(--muted2);}
+.empty-state{text-align:center;padding:60px 20px;}
+.empty-icon{font-size:40px;margin-bottom:16px;opacity:.3;}
+.empty-text{font-size:13px;color:var(--muted2);margin-bottom:6px;}
+.empty-sub{font-size:11px;color:var(--muted);}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--green-dim);border:1px solid var(--green);border-radius:6px;padding:12px 20px;font-size:11px;color:var(--green);z-index:300;opacity:0;transform:translateY(10px);transition:all .2s;pointer-events:none;}
+.toast.show{opacity:1;transform:translateY(0);}
+.toast.err{background:#1a0a0a;border-color:var(--red);color:var(--red);}
+@media(max-width:900px){.scraper-layout{grid-template-columns:1fr;}.intel-grid{grid-template-columns:1fr;}.bottom-grid{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-brand">
+    <div class="nav-logo">ResuMaster</div>
+    <div class="nav-sub">Intelligence Database</div>
+  </div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showPage('scraper')">Scraper</button>
+    <button class="nav-tab" onclick="showPage('database')">Database</button>
+    <button class="nav-tab" onclick="showPage('intelligence')">Intelligence</button>
+  </div>
+  <div class="nav-right">
+    <div class="sync-indicator"><span class="sync-dot syncing" id="syncDot"></span><span id="syncText">Connecting...</span></div>
+    <div class="nav-stat">
+      <div class="nav-stat-num" id="totalRunsStat">—</div>
+      <div class="nav-stat-label">Total Scrapes</div>
+    </div>
+  </div>
+</nav>
+
+<!-- SCRAPER -->
+<div class="page active" id="page-scraper">
+  <div class="scraper-layout">
+    <div>
+      <div class="panel">
+        <div class="panel-title">New Research Run</div>
+        <div class="row2">
+          <div class="field">
+            <label class="label">Target Role</label>
+            <input type="text" id="role" placeholder="e.g. Business Analyst"/>
+          </div>
+          <div class="field">
+            <label class="label">Location</label>
+            <input type="text" id="location" value="Ontario, Canada"/>
+          </div>
+        </div>
+        <div class="field">
+          <label class="label">Industry Category</label>
+          <select id="industryOverride">
+            <option value="auto">Auto-detect</option>
+            <option value="healthcare">Healthcare / Nursing / PSW</option>
+            <option value="finance">Finance / Banking / Accounting</option>
+            <option value="tech">Technology / Software / IT</option>
+            <option value="admin">Admin / Coordinator / Office</option>
+            <option value="marketing">Marketing / Content / SEO</option>
+            <option value="hr">Human Resources / Recruiting</option>
+            <option value="consulting">Consulting / Operations / PM</option>
+            <option value="trades">Trades / Warehouse / Logistics</option>
+            <option value="sales">Sales / Retail / Customer Success</option>
+            <option value="legal">Legal / Compliance / Paralegal</option>
+            <option value="general">General / Other</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="label">Max Postings</label>
+          <div class="chip-row" id="maxChips">
+            <button class="chip" onclick="setMax(50)">50</button>
+            <button class="chip active" onclick="setMax(100)">100</button>
+            <button class="chip" onclick="setMax(150)">150</button>
+            <button class="chip" onclick="setMax(200)">200</button>
+          </div>
+        </div>
+        <div class="field">
+          <label class="label">Date Range</label>
+          <div class="chip-row" id="dayChips">
+            <button class="chip" onclick="setDays(14)">14 days</button>
+            <button class="chip active" onclick="setDays(30)">30 days</button>
+            <button class="chip" onclick="setDays(90)">90 days</button>
+            <button class="chip" onclick="setDays(180)">180 days</button>
+          </div>
+        </div>
+        <button class="run-btn" id="runBtn" onclick="runScrape()" disabled>▶ RUN SCRAPE + ANALYZE</button>
+      </div>
+      <div class="status-box status-ok" id="statusBox"><span class="pulse"></span><span id="statusText"></span></div>
+      <div class="status-box status-err" id="errorBox"></div>
+      <div class="save-bar" id="saveBar">
+        <div class="save-info">
+          <strong id="saveRoleLabel">—</strong> ready to save
+          <div style="margin-top:3px;font-size:9px;color:var(--muted)" id="saveMeta"></div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn-outline" onclick="copyForClaude()">Copy for Claude</button>
+          <button class="btn-green" id="saveBtn" onclick="saveToDatabase()">Save to Database</button>
+        </div>
+      </div>
+    </div>
+    <div class="results-panel" id="resultsPanel">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <div>
+          <span style="font-family:'Syne',sans-serif;font-size:32px;font-weight:800;color:var(--green)" id="totalCount">0</span>
+          <span style="font-size:11px;color:var(--muted);margin-left:8px" id="totalLabel">postings analyzed</span>
+        </div>
+        <div style="display:flex;gap:10px;font-size:10px;color:var(--muted)">
+          <span><span style="color:var(--green)">■</span> T1 Critical 70%+</span>
+          <span><span style="color:var(--lime)">■</span> T2 High 40-69%</span>
+          <span><span style="color:var(--purple)">■</span> T3 Mid 20-39%</span>
+          <span><span style="color:var(--muted)">■</span> T4 Emerging</span>
+        </div>
+      </div>
+      <div class="kw-section"><div class="kw-section-title" style="color:var(--green)">Tier 1 — Critical ATS Keywords</div><div class="badges" id="tier1"></div></div>
+      <div class="kw-section"><div class="kw-section-title" style="color:var(--lime)">Tier 2 — High Value Keywords</div><div class="badges" id="tier2"></div></div>
+      <div class="kw-section"><div class="kw-section-title" style="color:var(--purple)">Tier 3 — Supplementary</div><div class="badges" id="tier3"></div></div>
+      <div class="kw-section"><div class="kw-section-title" style="color:var(--muted2)">Tier 4 — Emerging / Niche</div><div class="badges" id="tier4"></div></div>
+      <div class="bottom-grid">
+        <div class="kw-section"><div class="kw-section-title" style="color:var(--amber)">Action Verbs</div><div class="badges" id="verbs"></div></div>
+        <div class="kw-section"><div class="kw-section-title" style="color:var(--sky)">Tools & Software</div><div class="badges" id="tools"></div></div>
+        <div class="kw-section"><div class="kw-section-title" style="color:var(--pink)">Certs & Credentials</div><div class="badges" id="certs"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DATABASE -->
+<div class="page" id="page-database">
+  <div class="db-header">
+    <div>
+      <div class="db-title">Research Database</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px">All saved ATS scrape runs — synced to Supabase, accessible from any device</div>
+    </div>
+    <div class="db-controls">
+      <input class="search-input" type="text" placeholder="Search roles..." oninput="filterRecords(this.value)" id="dbSearch"/>
+      <select class="filter-select" onchange="filterByIndustry(this.value)" id="industryFilter">
+        <option value="">All Industries</option>
+        <option value="healthcare">Healthcare</option>
+        <option value="finance">Finance</option>
+        <option value="tech">Technology</option>
+        <option value="admin">Admin</option>
+        <option value="marketing">Marketing</option>
+        <option value="hr">HR</option>
+        <option value="consulting">Consulting</option>
+        <option value="trades">Trades</option>
+        <option value="sales">Sales</option>
+        <option value="legal">Legal</option>
+        <option value="general">General</option>
+      </select>
+    </div>
+  </div>
+  <div id="industryCardsSection"></div>
+  <div class="records-section">
+    <div class="records-title">All Records</div>
+    <div id="recordsList"><div class="empty-state"><div class="empty-icon">⏳</div><div class="empty-text">Loading from database...</div></div></div>
+  </div>
+</div>
+
+<!-- INTELLIGENCE -->
+<div class="page" id="page-intelligence">
+  <div class="intel-header">
+    <div class="intel-title">Cross-Industry Intelligence</div>
+    <div class="intel-sub">Aggregated insights from all scrape runs — patterns, top keywords, market signals</div>
+  </div>
+  <div id="intelBreakdown" style="margin-bottom:24px;"></div>
+  <div class="intel-grid" id="intelGrid"></div>
+  <div id="intelEmpty" class="empty-state" style="display:none;">
+    <div class="empty-icon">📊</div>
+    <div class="empty-text">No data yet</div>
+    <div class="empty-sub">Run scrapes and save them to build your intelligence database</div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="modalTitle"></div>
+        <div class="modal-meta" id="modalMeta"></div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕ Close</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-green" onclick="copyModalForClaude()">Copy for Claude</button>
+      <button class="btn-outline" onclick="toggleCopyArea()">Show Raw Text</button>
+      <button style="padding:9px 16px;background:transparent;border:1px solid #7f1d1d;border-radius:4px;color:var(--red);font-family:'IBM Plex Mono',monospace;font-size:11px;cursor:pointer;" onclick="deleteCurrentRecord()">Delete</button>
+    </div>
+    <div class="copy-area" id="modalCopyArea"></div>
+    <div id="modalBody"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// SUPABASE — anon key is safe to expose (public by design)
+// ============================================================
+const SB_URL='https://eevxcwthbzgemowoupab.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVldnhjd3RoYnpnZW1vd291cGFiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwODMyNjcsImV4cCI6MjA4ODY1OTI2N30.7J38XtgcpT5DAwyFps4frBXkxBqPv6JGIjUWKLOsQLU';
+const TBL='scrape_runs';
+const CFG='app_config';
+
+let APIFY_KEY=''; // loaded from Supabase at init
+
+async function sbReq(path,opts={}){
+  const r=await fetch(`${SB_URL}/rest/v1/${path}`,{
+    ...opts,
+    headers:{'apikey':SB_KEY,'Authorization':`Bearer ${SB_KEY}`,'Content-Type':'application/json','Prefer':opts.prefer||'',...(opts.headers||{})}
+  });
+  if(!r.ok){const e=await r.text();throw new Error(e);}
+  const t=await r.text();
+  return t?JSON.parse(t):null;
+}
+
+const dbGetAll=()=>sbReq(`${TBL}?order=date.desc`);
+const dbInsert=row=>sbReq(TBL,{method:'POST',prefer:'return=minimal',body:JSON.stringify(row)});
+const dbDelete=id=>sbReq(`${TBL}?id=eq.${id}`,{method:'DELETE'});
+const dbGetConfig=key=>sbReq(`${CFG}?key=eq.${key}&select=value`);
+
+// ============================================================
+// STATE
+// ============================================================
+let maxJobs=100,daysBack=30,attempts=0;
+let lastResults=null,lastRole='',lastLocation='',lastTotal=0,lastIndustry='';
+let allRecords=[];
+let currentFilter='',currentSearch='',currentModalId=null;
+
+// ============================================================
+// SCRAPER UI
+// ============================================================
+function setMax(n){maxJobs=n;document.querySelectorAll('#maxChips .chip').forEach(b=>b.classList.toggle('active',parseInt(b.textContent)===n));}
+function setDays(n){daysBack=n;document.querySelectorAll('#dayChips .chip').forEach(b=>{if(b.textContent.includes('days'))b.classList.toggle('active',parseInt(b.textContent)===n);});}
+function setStatus(m){const e=document.getElementById('statusBox');e.style.display='block';document.getElementById('statusText').textContent=m;}
+function setError(m){const e=document.getElementById('errorBox');e.style.display='block';e.textContent='⚠ '+m;}
+function clearMsg(){document.getElementById('statusBox').style.display='none';document.getElementById('errorBox').style.display='none';}
+
+async function runScrape(){
+  if(!APIFY_KEY){setError('Apify key not loaded. Please refresh.');return;}
+  const role=document.getElementById('role').value.trim();
+  const loc=document.getElementById('location').value.trim();
+  if(!role){setError('Please enter a target role.');return;}
+  clearMsg();
+  document.getElementById('runBtn').disabled=true;
+  document.getElementById('saveBar').style.display='none';
+  document.getElementById('resultsPanel').style.display='none';
+  setStatus('Starting Apify Indeed scraper...');
+  attempts=0;lastRole=role;lastLocation=loc;
+  try{
+    const res=await fetch(`https://api.apify.com/v2/acts/misceres~indeed-scraper/runs?token=${APIFY_KEY}`,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({position:role,country:'CA',location:loc,maxItems:maxJobs,saveOnlyUniqueItems:true,fromAge:daysBack})
+    });
+    const d=await res.json();
+    if(!res.ok||!d?.data?.id)throw new Error(d?.error?.message||'Failed to start.');
+    pollRun(d.data.id);
+  }catch(e){setError(e.message);document.getElementById('runBtn').disabled=false;}
+}
+
+async function pollRun(runId){
+  attempts++;
+  setStatus(`Scraping Indeed... attempt ${attempts}/40`);
+  try{
+    const r=await fetch(`https://api.apify.com/v2/actor-runs/${runId}?token=${APIFY_KEY}`);
+    const d=await r.json();
+    const s=d?.data?.status;
+    if(s==='SUCCEEDED'){
+      setStatus('Fetching job data...');
+      const ir=await fetch(`https://api.apify.com/v2/datasets/${d.data.defaultDatasetId}/items?token=${APIFY_KEY}&limit=200`);
+      const jobs=await ir.json();
+      setStatus(`Analyzing ${jobs.length} postings...`);
+      renderResults(jobs);
+    }else if(['FAILED','ABORTED','TIMED-OUT'].includes(s)){
+      setError(`Run ${s}.`);document.getElementById('runBtn').disabled=false;
+    }else if(attempts>=40){
+      setError('Timed out.');document.getElementById('runBtn').disabled=false;
+    }else setTimeout(()=>pollRun(runId),5000);
+  }catch(e){setError(e.message);document.getElementById('runBtn').disabled=false;}
+}
+
+// ============================================================
+// KEYWORD ANALYSIS
+// ============================================================
+function getRoleCat(role){
+  const r=role.toLowerCase();
+  if(/data|analyst|analytics|business intelligence|bi |scientist|machine learning/.test(r))return'data';
+  if(/market|content|social media|seo|brand|digital|campaign/.test(r))return'marketing';
+  if(/bank|financ|account|audit|credit|insurance|invest|wealth/.test(r))return'finance';
+  if(/nurse|psw|medical|dental|health|clinical|pharma|care/.test(r))return'healthcare';
+  if(/admin|coordinator|office|clerk|receptionist|executive assistant/.test(r))return'admin';
+  if(/software|developer|engineer|devops|cloud|frontend|backend|fullstack|qa|cyber/.test(r))return'tech';
+  if(/consult|project manager|operations|supply chain|logistics/.test(r))return'consulting';
+  if(/\bhr\b|human resources|recruiter|talent|payroll/.test(r))return'hr';
+  if(/sales|account manager|business development|retail|customer success/.test(r))return'sales';
+  if(/legal|paralegal|compliance|law clerk|contract/.test(r))return'legal';
+  if(/driver|forklift|warehouse|tradesperson|electrician|plumber|hvac|mechanic|welder/.test(r))return'trades';
+  return'general';
+}
+function getToolPat(cat){
+  const base=[/\b(Microsoft Office|Excel|Word|PowerPoint|Outlook|Teams|SharePoint|OneDrive|Google Workspace|Google Docs|Google Sheets|Gmail|Zoom|Slack|Asana|Monday\.com|Trello|Notion|Salesforce|HubSpot|SAP|Oracle|QuickBooks|Xero|ADP|Ceridian|Dayforce)\b/gi];
+  const m={
+    data:[/\b(SQL|Python|R|Tableau|Power BI|Looker|Databricks|Snowflake|Azure|AWS|GCP|BigQuery|Spark|Hadoop|dbt|Airflow|Jupyter|pandas|NumPy|TensorFlow|scikit-learn|SSRS|SSIS|MySQL|PostgreSQL|MongoDB)\b/gi],
+    marketing:[/\b(Google Analytics|GA4|Google Ads|Meta Ads|Facebook Ads|HubSpot|Marketo|Mailchimp|Klaviyo|Hootsuite|Buffer|SEMrush|Ahrefs|WordPress|Webflow|Figma|Canva|Adobe Creative Suite|Photoshop|Illustrator)\b/gi],
+    finance:[/\b(Bloomberg|Reuters|QuickBooks|Xero|Sage|Dynamics 365|SAP|Oracle Financials|FIS|Fiserv|FactSet|Morningstar|Capital IQ|Excel|VBA|Power BI|Tableau|MATLAB|SQL)\b/gi],
+    healthcare:[/\b(PointClickCare|Epic|Meditech|Cerner|OSCAR|Accuro|Telus Health|PCC|Allscripts|Pyxis|Omnicell|Dragon Medical|Stryker|Baxter|Philips)\b/gi],
+    admin:[/\b(Microsoft Office|Excel|Word|PowerPoint|Outlook|Teams|SharePoint|SAP|Oracle|Workday|Concur|DocuSign|AdobeSign|Zoom|Slack|Asana|Salesforce|Zendesk|ServiceNow)\b/gi],
+    tech:[/\b(JavaScript|TypeScript|Python|Java|C\+\+|C#|Go|Rust|React|Angular|Vue|Node\.js|Django|FastAPI|Spring|\.NET|Docker|Kubernetes|Terraform|Ansible|Jenkins|GitHub|GitLab|AWS|Azure|GCP|Jira|Confluence|Postman|Grafana|Datadog)\b/gi],
+    consulting:[/\b(Minitab|Excel|Visio|PowerPoint|SAP|Oracle|Lean|Six Sigma|DMAIC|Kaizen|Tableau|Power BI|MS Project|Primavera|Smartsheet|Asana|Jira)\b/gi],
+    hr:[/\b(Workday|SAP SuccessFactors|Oracle HCM|PeopleSoft|Taleo|iCIMS|Greenhouse|BambooHR|ADP|Ceridian|Dayforce|UltiPro|Kronos|LinkedIn Recruiter)\b/gi],
+    general:[/\b(SAP|Oracle|Salesforce|Workday|Excel|PowerPoint|Word|Outlook|Teams|SharePoint|Tableau|Power BI|SQL|Python|CRM|ERP|HRIS)\b/gi]
+  };
+  return[...base,...(m[cat]||m.general)];
+}
+function getCertPat(cat){
+  const base=[/\b(bachelors?|masters?|diploma|certificate|degree|post.?secondary)\b/gi];
+  const m={
+    data:[/\b(PMP|AWS Certified|Google Analytics|Azure|GCP|Databricks|Tableau Desktop|Power BI|SAS|CFA|MBA)\b/gi],
+    marketing:[/\b(Google Analytics|Google Ads|Meta Blueprint|HubSpot|Hootsuite|Facebook Blueprint|CIM|MBA)\b/gi],
+    finance:[/\b(CPA|CFA|CFP|CIM|CSC|LLQP|FRM|CAIA|MBA|PMP|FINTRAC|AML|KYC|IFRS)\b/gi],
+    healthcare:[/\b(PSW|RN|RPN|BScN|CPR|BLS|ACLS|WHMIS|PHIPA|OHSA|First Aid|PDBC|CNO)\b/gi],
+    admin:[/\b(PMP|CAP|MOS|CAPM|Notary|WHMIS|First Aid|ISO)\b/gi],
+    tech:[/\b(AWS|Azure|GCP|PMP|CISSP|CEH|CompTIA|Google Cloud|Kubernetes|Terraform|Scrum|ITIL|TOGAF|PMI-ACP)\b/gi],
+    consulting:[/\b(PMP|Lean|Six Sigma|Green Belt|Black Belt|CAPM|CBAP|ISO|CMC|MBA)\b/gi],
+    hr:[/\b(CHRP|CHRL|SHRM|PHR|SPHR|CPHR|WHMIS|First Aid|MBA|PMP)\b/gi],
+    general:[/\b(PMP|CPA|CFA|MBA|WHMIS|OHSA|ISO|Google Analytics|First Aid)\b/gi]
+  };
+  return[...base,...(m[cat]||m.general)];
+}
+function analyzeKW(jobs,role){
+  const freq={},verbs={},certs={},tools={};
+  const SW=new Set(["the","and","for","are","you","with","this","that","have","from","they","will","been","your","our","more","also","about","their","which","other","into","some","what","when","these","those","work","working","able","must","all","can","who","not","may","role","position","team","company","year","years","job","jobs","including","strong","excellent","required","ability","experience","skills","knowledge","minimum","preferred","equivalent","responsibilities","requirements","qualifications","opportunity","candidates","candidate","looking","seeking","ideal","ensure","support","provide","within","across","based","related","relevant","demonstrated","proven","plus","well","environment","day","new","high","key","level","both","such","per","its","has","had","one","two","three","any","use","used","using","make","made","take","taken","good","great","need","needs","needed","staff","part","full","time","date","days","hours","month","months","week","weeks","etc","canada","canadian","ontario","toronto","please","apply","location","salary","benefits","disability","accommodation","employment","human","rights","while","through","people","life","communities","global","employees","workforce","together","vacancy","offers","north","offer"]);
+  const cat=getRoleCat(role||'');
+  const TP=getToolPat(cat),CP=getCertPat(cat);
+  const VP=[/\b(managed?|led|lead|developed?|implemented?|coordinated?|analyzed?|created?|delivered?|supported?|maintained?|communicated?|collaborated?|facilitated?|monitored?|tracked?|reported?|presented?|prepared?|reviewed?|executed?|launched?|designed?|edited?|produced?|optimized?|built|planned?|streamlined?|identified?|assessed?|evaluated?|negotiated?|trained?|mentored?|coached?|drove|drive|spearheaded?|oversaw?|oversee)\b/gi];
+  jobs.forEach(j=>{
+    const t=`${j.title||''} ${j.description||''}`.toLowerCase();
+    const r=`${j.title||''} ${j.description||''}`;
+    const w=t.match(/\b[a-z][a-z-]{2,}\b/g)||[];
+    w.forEach(x=>{if(!SW.has(x)&&x.length>3)freq[x]=(freq[x]||0)+1;});
+    for(let i=0;i<w.length-1;i++){const b=`${w[i]} ${w[i+1]}`;if(!SW.has(w[i])&&!SW.has(w[i+1])&&w[i].length>3&&w[i+1].length>3)freq[b]=(freq[b]||0)+1;}
+    VP.forEach(p=>(r.match(p)||[]).forEach(m=>{const b=m.toLowerCase();verbs[b]=(verbs[b]||0)+1;}));
+    CP.forEach(p=>(r.match(p)||[]).forEach(m=>{certs[m.toUpperCase()]=(certs[m.toUpperCase()]||0)+1;}));
+    TP.forEach(p=>(r.match(p)||[]).forEach(m=>{tools[m]=(tools[m]||0)+1;}));
+  });
+  const sort=o=>Object.entries(o).sort((a,b)=>b[1]-a[1]);
+  return{freq:sort(freq),verbs:sort(verbs),certs:sort(certs),tools:sort(tools),total:jobs.length,category:cat};
+}
+function tierColor(pct){
+  if(pct>=70)return{color:'var(--green)',bg:'var(--green-dim)',border:'var(--green)'};
+  if(pct>=40)return{color:'var(--lime)',bg:'#1a1f0f',border:'var(--lime)'};
+  if(pct>=20)return{color:'var(--purple)',bg:'#1a1519',border:'var(--purple)'};
+  return{color:'var(--muted)',bg:'#0d0d0d',border:'var(--border2)'};
+}
+function makeBadge(kw,c,t){const pct=Math.round((c/t)*100);const{color,bg,border}=tierColor(pct);return`<div class="badge" style="background:${bg};border-color:${border}"><span class="badge-kw">${kw}</span><span class="badge-pct" style="color:${color}">${pct}%</span></div>`;}
+function fillSect(id,items,total,minC=1){const el=document.getElementById(id);if(!el)return;el.innerHTML=items.filter(([,c])=>c>=minC).slice(0,40).map(([kw,c])=>makeBadge(kw,c,total)).join('');}
+
+function renderResults(jobs){
+  const data=analyzeKW(jobs,lastRole);
+  const{freq,verbs,certs,tools,total,category}=data;
+  const ov=document.getElementById('industryOverride').value;
+  lastIndustry=ov!=='auto'?ov:category;
+  lastResults=data;lastTotal=total;
+  document.getElementById('totalCount').textContent=total;
+  document.getElementById('totalLabel').textContent=`postings analyzed · Indeed ${lastLocation}`;
+  const t1=freq.filter(([,c])=>c/total>=.7);
+  const t2=freq.filter(([,c])=>{const p=c/total;return p>=.4&&p<.7;});
+  const t3=freq.filter(([,c])=>{const p=c/total;return p>=.2&&p<.4;});
+  const t4=freq.filter(([,c])=>{const p=c/total;return p<.2&&c>=3;});
+  fillSect('tier1',t1,total);fillSect('tier2',t2,total);fillSect('tier3',t3,total);fillSect('tier4',t4,total);
+  fillSect('verbs',verbs,total,2);fillSect('tools',tools,total,2);fillSect('certs',certs,total,1);
+  document.getElementById('statusBox').style.display='none';
+  document.getElementById('resultsPanel').style.display='block';
+  document.getElementById('runBtn').disabled=false;
+  document.getElementById('saveBar').style.display='flex';
+  document.getElementById('saveRoleLabel').textContent=lastRole;
+  document.getElementById('saveMeta').textContent=`${total} postings · ${lastIndustry} · ${lastLocation}`;
+}
+
+// ============================================================
+// SAVE
+// ============================================================
+async function saveToDatabase(){
+  if(!lastResults)return;
+  const btn=document.getElementById('saveBtn');
+  btn.textContent='Saving...';btn.disabled=true;
+  const record={id:Date.now().toString(),role:lastRole,location:lastLocation,industry:lastIndustry,total:lastTotal,daysBack,date:new Date().toISOString(),data:lastResults};
+  try{
+    await dbInsert({id:record.id,role:record.role,location:record.location,industry:record.industry,total:record.total,days_back:record.daysBack,date:record.date,data:record.data});
+    allRecords.unshift(record);
+    updateNavStat();
+    showToast(`✓ Saved "${lastRole}" to database`);
+    document.getElementById('saveBar').style.display='none';
+    setSyncOk();
+  }catch(e){showToast('⚠ Save failed: '+e.message,true);setSyncErr();}
+  btn.textContent='Save to Database';btn.disabled=false;
+}
+
+// ============================================================
+// COPY FOR CLAUDE
+// ============================================================
+function buildClaudeText(rec){
+  const{data,role,location,total,daysBack:d,date}=rec;
+  const{freq,verbs,certs,tools}=data;
+  const ds=date?new Date(date).toISOString().split('T')[0]:'—';
+  const fmt=(arr,n,t)=>arr.slice(0,n).map(([k,c])=>`${k} (${Math.round(c/t*100)}%)`).join(', ');
+  return`--- RESUMASTER ATS KEYWORD RESEARCH ---
+Role: ${role}
+Location: ${location}
+Postings Analyzed: ${total}
+Date Range: Last ${d} days
+Date: ${ds}
+
+TIER 1 — CRITICAL (Must Include, 70%+):
+${fmt(freq.filter(([,c])=>c/total>=.7),20,total)}
+
+TIER 2 — HIGH VALUE (40–69%):
+${fmt(freq.filter(([,c])=>{const p=c/total;return p>=.4&&p<.7;}),20,total)}
+
+TIER 3 — SUPPLEMENTARY (20–39%):
+${fmt(freq.filter(([,c])=>{const p=c/total;return p>=.2&&p<.4;}),15,total)}
+
+TOP ACTION VERBS:
+${fmt(verbs,15,total)}
+
+TOOLS & SOFTWARE:
+${fmt(tools,15,total)}
+
+CERTS & CREDENTIALS:
+${fmt(certs,10,total)}
+
+--- END KEYWORD RESEARCH ---
+Now use the above keyword data along with the client information provided to write the resume following the Master Prompt instructions.`;
+}
+function copyForClaude(){if(!lastResults)return;const fake={data:lastResults,role:lastRole,location:lastLocation,total:lastTotal,daysBack,date:new Date().toISOString()};navigator.clipboard.writeText(buildClaudeText(fake)).then(()=>showToast('✓ Copied to clipboard')).catch(()=>{});}
+
+// ============================================================
+// NAV
+// ============================================================
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  document.querySelectorAll('.nav-tab').forEach(t=>{if(t.textContent.toLowerCase()===id)t.classList.add('active');});
+  if(id==='database')renderDatabase();
+  if(id==='intelligence')renderIntelligence();
+}
+function updateNavStat(){document.getElementById('totalRunsStat').textContent=allRecords.length;}
+function setSyncOk(){const d=document.getElementById('syncDot');d.className='sync-dot';document.getElementById('syncText').textContent='Connected';}
+function setSyncErr(){const d=document.getElementById('syncDot');d.className='sync-dot err';document.getElementById('syncText').textContent='Sync error';}
+function setSyncSyncing(){const d=document.getElementById('syncDot');d.className='sync-dot syncing';document.getElementById('syncText').textContent='Connecting...';}
+
+// ============================================================
+// DATABASE
+// ============================================================
+const IND={healthcare:'Healthcare',finance:'Finance',tech:'Technology',admin:'Admin',marketing:'Marketing',hr:'Human Resources',consulting:'Consulting',trades:'Trades',sales:'Sales',legal:'Legal',general:'General'};
+function filterRecords(v){currentSearch=v;renderDatabase();}
+function filterByIndustry(v){currentFilter=v;renderDatabase();}
+function filterByIndustryClick(ind){document.getElementById('industryFilter').value=ind;currentFilter=ind;renderDatabase();}
+function renderDatabase(){
+  let recs=allRecords;
+  if(currentFilter)recs=recs.filter(r=>r.industry===currentFilter);
+  if(currentSearch)recs=recs.filter(r=>r.role.toLowerCase().includes(currentSearch.toLowerCase()));
+  const byInd={};
+  allRecords.forEach(r=>{if(!byInd[r.industry])byInd[r.industry]={count:0,roles:[]};byInd[r.industry].count++;if(!byInd[r.industry].roles.includes(r.role))byInd[r.industry].roles.push(r.role);});
+  const cards=Object.entries(byInd).map(([ind,info])=>`<div class="industry-card" data-industry="${ind}" onclick="filterByIndustryClick('${ind}')"><div class="ic-top"><div class="ic-name">${IND[ind]||ind}</div><div style="text-align:right"><div class="ic-count">${info.count}</div><div class="ic-count-label">scrapes</div></div></div><div class="ic-roles">${info.roles.slice(0,5).map(r=>`<span class="ic-role-chip">${r}</span>`).join('')}${info.roles.length>5?`<span class="ic-role-chip">+${info.roles.length-5} more</span>`:''}</div><div class="ic-meta">${info.roles.length} unique roles</div></div>`).join('');
+  document.getElementById('industryCardsSection').innerHTML=Object.keys(byInd).length?`<div style="font-size:10px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-bottom:12px;">By Industry</div><div class="industry-grid">${cards}</div>`:'';
+  const listEl=document.getElementById('recordsList');
+  if(!recs.length){listEl.innerHTML=`<div class="empty-state"><div class="empty-icon">🗂️</div><div class="empty-text">No records found</div><div class="empty-sub">Run a scrape and save it to start building your database</div></div>`;return;}
+  listEl.innerHTML=recs.map(r=>`<div class="record-row" onclick="openRecord('${r.id}')"><div class="rr-industry ind-${r.industry}">${(IND[r.industry]||r.industry).toUpperCase()}</div><div class="rr-role">${r.role}</div><div class="rr-postings">${r.total} postings</div><div class="rr-date">${new Date(r.date).toLocaleDateString('en-CA')}</div><button class="rr-delete" onclick="event.stopPropagation();deleteRecord('${r.id}')">Delete</button></div>`).join('');
+}
+async function deleteRecord(id){
+  try{await dbDelete(id);allRecords=allRecords.filter(r=>r.id!==id);renderDatabase();updateNavStat();showToast('Record deleted');}
+  catch(e){showToast('⚠ Delete failed',true);}
+}
+
+// ============================================================
+// MODAL
+// ============================================================
+function openRecord(id){
+  const rec=allRecords.find(r=>r.id===id);if(!rec)return;
+  currentModalId=id;
+  document.getElementById('modalTitle').textContent=rec.role;
+  document.getElementById('modalMeta').textContent=`${IND[rec.industry]||rec.industry} · ${rec.total} postings · ${rec.location} · ${new Date(rec.date).toLocaleDateString('en-CA')}`;
+  document.getElementById('modalCopyArea').style.display='none';
+  document.getElementById('modalCopyArea').textContent=buildClaudeText(rec);
+  const{freq,verbs,certs,tools}=rec.data;const t=rec.total;
+  const t1=freq.filter(([,c])=>c/t>=.7),t2=freq.filter(([,c])=>{const p=c/t;return p>=.4&&p<.7;}),t3=freq.filter(([,c])=>{const p=c/t;return p>=.2&&p<.4;}),t4=freq.filter(([,c])=>{const p=c/t;return p<.2&&c>=3;});
+  const mkB=arr=>arr.slice(0,40).map(([kw,c])=>makeBadge(kw,c,t)).join('');
+  document.getElementById('modalBody').innerHTML=`<div class="kw-section"><div class="kw-section-title" style="color:var(--green)">Tier 1 — Critical</div><div class="badges">${mkB(t1)}</div></div><div class="kw-section"><div class="kw-section-title" style="color:var(--lime)">Tier 2 — High Value</div><div class="badges">${mkB(t2)}</div></div><div class="kw-section"><div class="kw-section-title" style="color:var(--purple)">Tier 3 — Supplementary</div><div class="badges">${mkB(t3)}</div></div><div class="kw-section"><div class="kw-section-title" style="color:var(--muted2)">Tier 4 — Emerging</div><div class="badges">${mkB(t4)}</div></div><div class="bottom-grid"><div class="kw-section"><div class="kw-section-title" style="color:var(--amber)">Action Verbs</div><div class="badges">${verbs.slice(0,20).map(([kw,c])=>makeBadge(kw,c,t)).join('')}</div></div><div class="kw-section"><div class="kw-section-title" style="color:var(--sky)">Tools & Software</div><div class="badges">${tools.slice(0,20).map(([kw,c])=>makeBadge(kw,c,t)).join('')}</div></div><div class="kw-section"><div class="kw-section-title" style="color:var(--pink)">Certs & Credentials</div><div class="badges">${certs.slice(0,20).map(([kw,c])=>makeBadge(kw,c,t)).join('')}</div></div></div>`;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+function closeModal(e){if(!e||e.target===document.getElementById('modalOverlay'))document.getElementById('modalOverlay').classList.remove('open');}
+function toggleCopyArea(){const el=document.getElementById('modalCopyArea');el.style.display=el.style.display==='none'?'block':'none';}
+function copyModalForClaude(){const rec=allRecords.find(r=>r.id===currentModalId);if(!rec)return;navigator.clipboard.writeText(buildClaudeText(rec)).then(()=>showToast('✓ Copied to clipboard')).catch(()=>{});}
+async function deleteCurrentRecord(){if(!currentModalId)return;await deleteRecord(currentModalId);document.getElementById('modalOverlay').classList.remove('open');}
+
+// ============================================================
+// INTELLIGENCE
+// ============================================================
+function renderIntelligence(){
+  if(!allRecords.length){document.getElementById('intelEmpty').style.display='block';document.getElementById('intelBreakdown').innerHTML='';document.getElementById('intelGrid').innerHTML='';return;}
+  document.getElementById('intelEmpty').style.display='none';
+  const byInd={};
+  allRecords.forEach(r=>{if(!byInd[r.industry])byInd[r.industry]={count:0,postings:0};byInd[r.industry].count++;byInd[r.industry].postings+=r.total||0;});
+  document.getElementById('intelBreakdown').innerHTML=`<div style="font-size:10px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-bottom:12px;">Coverage by Industry</div><div class="industry-breakdown">${Object.entries(byInd).map(([ind,d])=>`<div class="ib-card"><div class="ib-name ind-${ind}">${(IND[ind]||ind).toUpperCase()}</div><div class="ib-num">${d.count}</div><div class="ib-sub">${d.postings.toLocaleString()} postings total</div></div>`).join('')}</div>`;
+  document.getElementById('intelGrid').innerHTML=Object.entries(byInd).map(([ind,info])=>{
+    const recs=allRecords.filter(r=>r.industry===ind);
+    const merged={};let tp=0;
+    recs.forEach(r=>{tp+=r.total||0;r.data.freq.forEach(([kw,c])=>{merged[kw]=(merged[kw]||0)+c;});});
+    const sorted=Object.entries(merged).sort((a,b)=>b[1]-a[1]).slice(0,12);
+    const max=sorted[0]?.[1]||1;
+    return`<div class="intel-card"><div class="intel-card-title ind-${ind}">${(IND[ind]||ind).toUpperCase()} — TOP KEYWORDS</div><div style="font-size:9px;color:var(--muted);margin-bottom:12px;">${info.count} scrapes · ${tp.toLocaleString()} postings</div>${sorted.map(([kw,c],i)=>`<div class="kw-rank-row"><div class="kw-rank-num">${i+1}</div><div class="kw-rank-word">${kw}</div><div class="kw-rank-bar-wrap"><div class="kw-rank-bar" style="width:${Math.round(c/max*100)}%"></div></div><div class="kw-rank-count">${c}</div></div>`).join('')}</div>`;
+  }).join('');
+}
+
+// ============================================================
+// TOAST
+// ============================================================
+let toastTimer=null;
+function showToast(msg,err=false){const t=document.getElementById('toast');t.textContent=msg;t.className='toast'+(err?' err':'');t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2500);}
+
+// ============================================================
+// INIT — fetch Apify key + all records from Supabase
+// ============================================================
+async function init(){
+  setSyncSyncing();
+  try{
+    // Load Apify key from Supabase config table
+    const cfg=await dbGetConfig('apify_token');
+    if(cfg&&cfg[0]&&cfg[0].value){
+      APIFY_KEY=cfg[0].value;
+      document.getElementById('runBtn').disabled=false;
+    } else {
+      throw new Error('Apify key not found in config');
+    }
+    // Load all scrape records
+    const rows=await dbGetAll();
+    allRecords=(rows||[]).map(r=>({id:r.id,role:r.role,location:r.location,industry:r.industry,total:r.total,daysBack:r.days_back,date:r.date,data:r.data}));
+    updateNavStat();
+    setSyncOk();
+  }catch(e){
+    setSyncErr();
+    showToast('⚠ Could not connect to Supabase',true);
+  }
+}
+
+init();
+</script>
+</body>
+</html>
