@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>ResuMaster — Intelligence Database</title>
+<title>ResuMaster â Intelligence Database</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=IBM+Plex+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -150,6 +150,16 @@ select option{background:var(--bg);}
 .toast{position:fixed;bottom:24px;right:24px;background:var(--green-dim);border:1px solid var(--green);border-radius:6px;padding:12px 20px;font-size:11px;color:var(--green);z-index:300;opacity:0;transform:translateY(10px);transition:all .2s;pointer-events:none;}
 .toast.show{opacity:1;transform:translateY(0);}
 .toast.err{background:#1a0a0a;border-color:var(--red);color:var(--red);}
+/* API KEY PANEL */
+.apikey-panel{background:#1a0f00;border:1px solid var(--amber);border-radius:8px;padding:20px;margin-top:16px;}
+.apikey-panel-title{font-size:9px;letter-spacing:3px;color:var(--amber);text-transform:uppercase;margin-bottom:12px;}
+.apikey-row{display:flex;gap:8px;align-items:center;}
+.apikey-row input{flex:1;}
+.btn-amber{padding:9px 16px;background:var(--amber);color:#000;border:none;border-radius:4px;font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:11px;letter-spacing:1px;cursor:pointer;text-transform:uppercase;white-space:nowrap;}
+.btn-amber:hover{background:#d97706;}
+.apikey-hint{font-size:9px;color:var(--muted);margin-top:8px;line-height:1.6;}
+.apikey-update-btn{margin-top:16px;width:100%;padding:9px;background:transparent;color:var(--muted2);border:1px solid var(--border2);border-radius:4px;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1px;cursor:pointer;text-transform:uppercase;transition:all .15s;}
+.apikey-update-btn:hover{border-color:var(--amber);color:var(--amber);}
 @media(max-width:900px){.scraper-layout{grid-template-columns:1fr;}.intel-grid{grid-template-columns:1fr;}.bottom-grid{grid-template-columns:1fr;}}
 </style>
 </head>
@@ -168,7 +178,7 @@ select option{background:var(--bg);}
   <div class="nav-right">
     <div class="sync-indicator"><span class="sync-dot syncing" id="syncDot"></span><span id="syncText">Connecting...</span></div>
     <div class="nav-stat">
-      <div class="nav-stat-num" id="totalRunsStat">—</div>
+      <div class="nav-stat-num" id="totalRunsStat">â</div>
       <div class="nav-stat-label">Total Scrapes</div>
     </div>
   </div>
@@ -225,13 +235,29 @@ select option{background:var(--bg);}
             <button class="chip" onclick="setDays(180)">180 days</button>
           </div>
         </div>
-        <button class="run-btn" id="runBtn" onclick="runScrape()" disabled>▶ RUN SCRAPE + ANALYZE</button>
+        <button class="run-btn" id="runBtn" onclick="runScrape()" disabled>â¶ RUN SCRAPE + ANALYZE</button>
+        <!-- Update API Key (always accessible) -->
+        <button class="apikey-update-btn" onclick="toggleKeyPanel()">â Update Apify API Key</button>
       </div>
+
+      <!-- API KEY PANEL â shown on error or on demand -->
+      <div class="apikey-panel" id="apikeyPanel" style="display:none;">
+        <div class="apikey-panel-title">â  Apify API Key Required</div>
+        <div class="apikey-row">
+          <input type="password" id="apifyKeyInput" placeholder="Paste your Apify API token..."/>
+          <button class="btn-amber" onclick="saveApifyKey()">Save Key</button>
+        </div>
+        <div class="apikey-hint">
+          Get your token at <strong>apify.com â Settings â Integrations â API tokens</strong><br/>
+          The key is saved securely to your Supabase config table â never stored in the repo.
+        </div>
+      </div>
+
       <div class="status-box status-ok" id="statusBox"><span class="pulse"></span><span id="statusText"></span></div>
       <div class="status-box status-err" id="errorBox"></div>
       <div class="save-bar" id="saveBar">
         <div class="save-info">
-          <strong id="saveRoleLabel">—</strong> ready to save
+          <strong id="saveRoleLabel">â</strong> ready to save
           <div style="margin-top:3px;font-size:9px;color:var(--muted)" id="saveMeta"></div>
         </div>
         <div style="display:flex;gap:8px;">
@@ -247,16 +273,16 @@ select option{background:var(--bg);}
           <span style="font-size:11px;color:var(--muted);margin-left:8px" id="totalLabel">postings analyzed</span>
         </div>
         <div style="display:flex;gap:10px;font-size:10px;color:var(--muted)">
-          <span><span style="color:var(--green)">■</span> T1 Critical 70%+</span>
-          <span><span style="color:var(--lime)">■</span> T2 High 40-69%</span>
-          <span><span style="color:var(--purple)">■</span> T3 Mid 20-39%</span>
-          <span><span style="color:var(--muted)">■</span> T4 Emerging</span>
+          <span><span style="color:var(--green)">â </span> T1 Critical 70%+</span>
+          <span><span style="color:var(--lime)">â </span> T2 High 40-69%</span>
+          <span><span style="color:var(--purple)">â </span> T3 Mid 20-39%</span>
+          <span><span style="color:var(--muted)">â </span> T4 Emerging</span>
         </div>
       </div>
-      <div class="kw-section"><div class="kw-section-title" style="color:var(--green)">Tier 1 — Critical ATS Keywords</div><div class="badges" id="tier1"></div></div>
-      <div class="kw-section"><div class="kw-section-title" style="color:var(--lime)">Tier 2 — High Value Keywords</div><div class="badges" id="tier2"></div></div>
-      <div class="kw-section"><div class="kw-section-title" style="color:var(--purple)">Tier 3 — Supplementary</div><div class="badges" id="tier3"></div></div>
-      <div class="kw-section"><div class="kw-section-title" style="color:var(--muted2)">Tier 4 — Emerging / Niche</div><div class="badges" id="tier4"></div></div>
+      <div class="kw-section"><div class="kw-section-title" style="color:var(--green)">Tier 1 â Critical ATS Keywords</div><div class="badges" id="tier1"></div></div>
+      <div class="kw-section"><div class="kw-section-title" style="color:var(--lime)">Tier 2 â High Value Keywords</div><div class="badges" id="tier2"></div></div>
+      <div class="kw-section"><div class="kw-section-title" style="color:var(--purple)">Tier 3 â Supplementary</div><div class="badges" id="tier3"></div></div>
+      <div class="kw-section"><div class="kw-section-title" style="color:var(--muted2)">Tier 4 â Emerging / Niche</div><div class="badges" id="tier4"></div></div>
       <div class="bottom-grid">
         <div class="kw-section"><div class="kw-section-title" style="color:var(--amber)">Action Verbs</div><div class="badges" id="verbs"></div></div>
         <div class="kw-section"><div class="kw-section-title" style="color:var(--sky)">Tools & Software</div><div class="badges" id="tools"></div></div>
@@ -271,7 +297,7 @@ select option{background:var(--bg);}
   <div class="db-header">
     <div>
       <div class="db-title">Research Database</div>
-      <div style="font-size:11px;color:var(--muted);margin-top:4px">All saved ATS scrape runs — synced to Supabase, accessible from any device</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px">All saved ATS scrape runs â synced to Supabase, accessible from any device</div>
     </div>
     <div class="db-controls">
       <input class="search-input" type="text" placeholder="Search roles..." oninput="filterRecords(this.value)" id="dbSearch"/>
@@ -294,7 +320,7 @@ select option{background:var(--bg);}
   <div id="industryCardsSection"></div>
   <div class="records-section">
     <div class="records-title">All Records</div>
-    <div id="recordsList"><div class="empty-state"><div class="empty-icon">⏳</div><div class="empty-text">Loading from database...</div></div></div>
+    <div id="recordsList"><div class="empty-state"><div class="empty-icon">â³</div><div class="empty-text">Loading from database...</div></div></div>
   </div>
 </div>
 
@@ -302,12 +328,12 @@ select option{background:var(--bg);}
 <div class="page" id="page-intelligence">
   <div class="intel-header">
     <div class="intel-title">Cross-Industry Intelligence</div>
-    <div class="intel-sub">Aggregated insights from all scrape runs — patterns, top keywords, market signals</div>
+    <div class="intel-sub">Aggregated insights from all scrape runs â patterns, top keywords, market signals</div>
   </div>
   <div id="intelBreakdown" style="margin-bottom:24px;"></div>
   <div class="intel-grid" id="intelGrid"></div>
   <div id="intelEmpty" class="empty-state" style="display:none;">
-    <div class="empty-icon">📊</div>
+    <div class="empty-icon">ð</div>
     <div class="empty-text">No data yet</div>
     <div class="empty-sub">Run scrapes and save them to build your intelligence database</div>
   </div>
@@ -321,7 +347,7 @@ select option{background:var(--bg);}
         <div class="modal-title" id="modalTitle"></div>
         <div class="modal-meta" id="modalMeta"></div>
       </div>
-      <button class="modal-close" onclick="closeModal()">✕ Close</button>
+      <button class="modal-close" onclick="closeModal()">â Close</button>
     </div>
     <div class="modal-actions">
       <button class="btn-green" onclick="copyModalForClaude()">Copy for Claude</button>
@@ -337,7 +363,7 @@ select option{background:var(--bg);}
 
 <script>
 // ============================================================
-// SUPABASE — anon key is safe to expose (public by design)
+// SUPABASE â anon key is safe to expose (public by design)
 // ============================================================
 const SB_URL='https://eevxcwthbzgemowoupab.supabase.co';
 const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVldnhjd3RoYnpnZW1vd291cGFiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwODMyNjcsImV4cCI6MjA4ODY1OTI2N30.7J38XtgcpT5DAwyFps4frBXkxBqPv6JGIjUWKLOsQLU';
@@ -360,6 +386,35 @@ const dbGetAll=()=>sbReq(`${TBL}?order=date.desc`);
 const dbInsert=row=>sbReq(TBL,{method:'POST',prefer:'return=minimal',body:JSON.stringify(row)});
 const dbDelete=id=>sbReq(`${TBL}?id=eq.${id}`,{method:'DELETE'});
 const dbGetConfig=key=>sbReq(`${CFG}?key=eq.${key}&select=value`);
+const dbUpsertConfig=(key,value)=>sbReq(CFG,{method:'POST',prefer:'resolution=merge-duplicates,return=minimal',body:JSON.stringify({key,value})});
+
+// ============================================================
+// API KEY MANAGEMENT
+// ============================================================
+function toggleKeyPanel(){
+  const p=document.getElementById('apikeyPanel');
+  p.style.display=p.style.display==='none'?'block':'none';
+}
+
+async function saveApifyKey(){
+  const val=document.getElementById('apifyKeyInput').value.trim();
+  if(!val){showToast('â  Please paste your Apify API token',true);return;}
+  const btn=document.querySelector('#apikeyPanel .btn-amber');
+  btn.textContent='Saving...';btn.disabled=true;
+  try{
+    await dbUpsertConfig('apify_token',val);
+    APIFY_KEY=val;
+    document.getElementById('runBtn').disabled=false;
+    document.getElementById('apikeyPanel').style.display='none';
+    document.getElementById('apifyKeyInput').value='';
+    setSyncOk();
+    showToast('â Apify key saved â scraper is ready');
+    document.getElementById('errorBox').style.display='none';
+  }catch(e){
+    showToast('â  Failed to save key: '+e.message,true);
+  }
+  btn.textContent='Save Key';btn.disabled=false;
+}
 
 // ============================================================
 // STATE
@@ -375,11 +430,11 @@ let currentFilter='',currentSearch='',currentModalId=null;
 function setMax(n){maxJobs=n;document.querySelectorAll('#maxChips .chip').forEach(b=>b.classList.toggle('active',parseInt(b.textContent)===n));}
 function setDays(n){daysBack=n;document.querySelectorAll('#dayChips .chip').forEach(b=>{if(b.textContent.includes('days'))b.classList.toggle('active',parseInt(b.textContent)===n);});}
 function setStatus(m){const e=document.getElementById('statusBox');e.style.display='block';document.getElementById('statusText').textContent=m;}
-function setError(m){const e=document.getElementById('errorBox');e.style.display='block';e.textContent='⚠ '+m;}
+function setError(m){const e=document.getElementById('errorBox');e.style.display='block';e.textContent='â  '+m;}
 function clearMsg(){document.getElementById('statusBox').style.display='none';document.getElementById('errorBox').style.display='none';}
 
 async function runScrape(){
-  if(!APIFY_KEY){setError('Apify key not loaded. Please refresh.');return;}
+  if(!APIFY_KEY){setError('Apify key not loaded. Use the â Update Apify API Key button below.');document.getElementById('apikeyPanel').style.display='block';return;}
   const role=document.getElementById('role').value.trim();
   const loc=document.getElementById('location').value.trim();
   if(!role){setError('Please enter a target role.');return;}
@@ -395,7 +450,7 @@ async function runScrape(){
       body:JSON.stringify({position:role,country:'CA',location:loc,maxItems:maxJobs,saveOnlyUniqueItems:true,fromAge:daysBack})
     });
     const d=await res.json();
-    if(!res.ok||!d?.data?.id)throw new Error(d?.error?.message||'Failed to start.');
+    if(!res.ok||!d?.data?.id)throw new Error(d?.error?.message||'Failed to start. Check your Apify key.');
     pollRun(d.data.id);
   }catch(e){setError(e.message);document.getElementById('runBtn').disabled=false;}
 }
@@ -471,149 +526,16 @@ function getCertPat(cat){
 }
 function analyzeKW(jobs,role){
   const freq={},verbs={},certs={},tools={};
-  const SW=new Set(["the","and","for","are","you","with","this","that","have","from","they","will","been","your","our","more","also","about","their","which","other","into","some","what","when","these","those","work","working","able","must","all","can","who","not","may","role","position","team","company","year","years","job","jobs","including","strong","excellent","required","ability","experience","skills","knowledge","minimum","preferred","equivalent","responsibilities","requirements","qualifications","opportunity","candidates","candidate","looking","seeking","ideal","ensure","support","provide","within","across","based","related","relevant","demonstrated","proven","plus","well","environment","day","new","high","key","level","both","such","per","its","has","had","one","two","three","any","use","used","using","make","made","take","taken","good","great","need","needs","needed","staff","part","full","time","date","days","hours","month","months","week","weeks","etc","canada","canadian","ontario","toronto","please","apply","location","salary","benefits","disability","accommodation","employment","human","rights","while","through","people","life","communities","global","employees","workforce","together","vacancy","offers","north","offer"]);
-  const cat=getRoleCat(role||'');
-  const TP=getToolPat(cat),CP=getCertPat(cat);
-  const VP=[/\b(managed?|led|lead|developed?|implemented?|coordinated?|analyzed?|created?|delivered?|supported?|maintained?|communicated?|collaborated?|facilitated?|monitored?|tracked?|reported?|presented?|prepared?|reviewed?|executed?|launched?|designed?|edited?|produced?|optimized?|built|planned?|streamlined?|identified?|assessed?|evaluated?|negotiated?|trained?|mentored?|coached?|drove|drive|spearheaded?|oversaw?|oversee)\b/gi];
-  jobs.forEach(j=>{
-    const t=`${j.title||''} ${j.description||''}`.toLowerCase();
-    const r=`${j.title||''} ${j.description||''}`;
-    const w=t.match(/\b[a-z][a-z-]{2,}\b/g)||[];
-    w.forEach(x=>{if(!SW.has(x)&&x.length>3)freq[x]=(freq[x]||0)+1;});
-    for(let i=0;i<w.length-1;i++){const b=`${w[i]} ${w[i+1]}`;if(!SW.has(w[i])&&!SW.has(w[i+1])&&w[i].length>3&&w[i+1].length>3)freq[b]=(freq[b]||0)+1;}
-    VP.forEach(p=>(r.match(p)||[]).forEach(m=>{const b=m.toLowerCase();verbs[b]=(verbs[b]||0)+1;}));
-    CP.forEach(p=>(r.match(p)||[]).forEach(m=>{certs[m.toUpperCase()]=(certs[m.toUpperCase()]||0)+1;}));
-    TP.forEach(p=>(r.match(p)||[]).forEach(m=>{tools[m]=(tools[m]||0)+1;}));
-  });
-  const sort=o=>Object.entries(o).sort((a,b)=>b[1]-a[1]);
-  return{freq:sort(freq),verbs:sort(verbs),certs:sort(certs),tools:sort(tools),total:jobs.length,category:cat};
-}
-function tierColor(pct){
-  if(pct>=70)return{color:'var(--green)',bg:'var(--green-dim)',border:'var(--green)'};
-  if(pct>=40)return{color:'var(--lime)',bg:'#1a1f0f',border:'var(--lime)'};
-  if(pct>=20)return{color:'var(--purple)',bg:'#1a1519',border:'var(--purple)'};
-  return{color:'var(--muted)',bg:'#0d0d0d',border:'var(--border2)'};
-}
-function makeBadge(kw,c,t){const pct=Math.round((c/t)*100);const{color,bg,border}=tierColor(pct);return`<div class="badge" style="background:${bg};border-color:${border}"><span class="badge-kw">${kw}</span><span class="badge-pct" style="color:${color}">${pct}%</span></div>`;}
-function fillSect(id,items,total,minC=1){const el=document.getElementById(id);if(!el)return;el.innerHTML=items.filter(([,c])=>c>=minC).slice(0,40).map(([kw,c])=>makeBadge(kw,c,total)).join('');}
-
-function renderResults(jobs){
-  const data=analyzeKW(jobs,lastRole);
-  const{freq,verbs,certs,tools,total,category}=data;
-  const ov=document.getElementById('industryOverride').value;
-  lastIndustry=ov!=='auto'?ov:category;
-  lastResults=data;lastTotal=total;
-  document.getElementById('totalCount').textContent=total;
-  document.getElementById('totalLabel').textContent=`postings analyzed · Indeed ${lastLocation}`;
-  const t1=freq.filter(([,c])=>c/total>=.7);
-  const t2=freq.filter(([,c])=>{const p=c/total;return p>=.4&&p<.7;});
-  const t3=freq.filter(([,c])=>{const p=c/total;return p>=.2&&p<.4;});
-  const t4=freq.filter(([,c])=>{const p=c/total;return p<.2&&c>=3;});
-  fillSect('tier1',t1,total);fillSect('tier2',t2,total);fillSect('tier3',t3,total);fillSect('tier4',t4,total);
-  fillSect('verbs',verbs,total,2);fillSect('tools',tools,total,2);fillSect('certs',certs,total,1);
-  document.getElementById('statusBox').style.display='none';
-  document.getElementById('resultsPanel').style.display='block';
-  document.getElementById('runBtn').disabled=false;
-  document.getElementById('saveBar').style.display='flex';
-  document.getElementById('saveRoleLabel').textContent=lastRole;
-  document.getElementById('saveMeta').textContent=`${total} postings · ${lastIndustry} · ${lastLocation}`;
-}
-
-// ============================================================
-// SAVE
-// ============================================================
-async function saveToDatabase(){
-  if(!lastResults)return;
-  const btn=document.getElementById('saveBtn');
-  btn.textContent='Saving...';btn.disabled=true;
-  const record={id:Date.now().toString(),role:lastRole,location:lastLocation,industry:lastIndustry,total:lastTotal,daysBack,date:new Date().toISOString(),data:lastResults};
-  try{
-    await dbInsert({id:record.id,role:record.role,location:record.location,industry:record.industry,total:record.total,days_back:record.daysBack,date:record.date,data:record.data});
-    allRecords.unshift(record);
-    updateNavStat();
-    showToast(`✓ Saved "${lastRole}" to database`);
-    document.getElementById('saveBar').style.display='none';
-    setSyncOk();
-  }catch(e){showToast('⚠ Save failed: '+e.message,true);setSyncErr();}
-  btn.textContent='Save to Database';btn.disabled=false;
-}
-
-// ============================================================
-// COPY FOR CLAUDE
-// ============================================================
-function buildClaudeText(rec){
-  const{data,role,location,total,daysBack:d,date}=rec;
-  const{freq,verbs,certs,tools}=data;
-  const ds=date?new Date(date).toISOString().split('T')[0]:'—';
-  const fmt=(arr,n,t)=>arr.slice(0,n).map(([k,c])=>`${k} (${Math.round(c/t*100)}%)`).join(', ');
-  return`--- RESUMASTER ATS KEYWORD RESEARCH ---
-Role: ${role}
-Location: ${location}
-Postings Analyzed: ${total}
-Date Range: Last ${d} days
-Date: ${ds}
-
-TIER 1 — CRITICAL (Must Include, 70%+):
-${fmt(freq.filter(([,c])=>c/total>=.7),20,total)}
-
-TIER 2 — HIGH VALUE (40–69%):
-${fmt(freq.filter(([,c])=>{const p=c/total;return p>=.4&&p<.7;}),20,total)}
-
-TIER 3 — SUPPLEMENTARY (20–39%):
-${fmt(freq.filter(([,c])=>{const p=c/total;return p>=.2&&p<.4;}),15,total)}
-
-TOP ACTION VERBS:
-${fmt(verbs,15,total)}
-
-TOOLS & SOFTWARE:
-${fmt(tools,15,total)}
-
-CERTS & CREDENTIALS:
-${fmt(certs,10,total)}
-
---- END KEYWORD RESEARCH ---
-Now use the above keyword data along with the client information provided to write the resume following the Master Prompt instructions.`;
-}
-function copyForClaude(){if(!lastResults)return;const fake={data:lastResults,role:lastRole,location:lastLocation,total:lastTotal,daysBack,date:new Date().toISOString()};navigator.clipboard.writeText(buildClaudeText(fake)).then(()=>showToast('✓ Copied to clipboard')).catch(()=>{});}
-
-// ============================================================
-// NAV
-// ============================================================
-function showPage(id){
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
-  document.getElementById('page-'+id).classList.add('active');
-  document.querySelectorAll('.nav-tab').forEach(t=>{if(t.textContent.toLowerCase()===id)t.classList.add('active');});
-  if(id==='database')renderDatabase();
-  if(id==='intelligence')renderIntelligence();
-}
-function updateNavStat(){document.getElementById('totalRunsStat').textContent=allRecords.length;}
-function setSyncOk(){const d=document.getElementById('syncDot');d.className='sync-dot';document.getElementById('syncText').textContent='Connected';}
-function setSyncErr(){const d=document.getElementById('syncDot');d.className='sync-dot err';document.getElementById('syncText').textContent='Sync error';}
-function setSyncSyncing(){const d=document.getElementById('syncDot');d.className='sync-dot syncing';document.getElementById('syncText').textContent='Connecting...';}
-
-// ============================================================
-// DATABASE
-// ============================================================
-const IND={healthcare:'Healthcare',finance:'Finance',tech:'Technology',admin:'Admin',marketing:'Marketing',hr:'Human Resources',consulting:'Consulting',trades:'Trades',sales:'Sales',legal:'Legal',general:'General'};
-function filterRecords(v){currentSearch=v;renderDatabase();}
-function filterByIndustry(v){currentFilter=v;renderDatabase();}
-function filterByIndustryClick(ind){document.getElementById('industryFilter').value=ind;currentFilter=ind;renderDatabase();}
-function renderDatabase(){
-  let recs=allRecords;
-  if(currentFilter)recs=recs.filter(r=>r.industry===currentFilter);
-  if(currentSearch)recs=recs.filter(r=>r.role.toLowerCase().includes(currentSearch.toLowerCase()));
-  const byInd={};
-  allRecords.forEach(r=>{if(!byInd[r.industry])byInd[r.industry]={count:0,roles:[]};byInd[r.industry].count++;if(!byInd[r.industry].roles.includes(r.role))byInd[r.industry].roles.push(r.role);});
+  const SW=new Set(["the","and","for","are","you","with","this","that","have","from","they","will","been","your","our","more","also","about","their","which","other","into","some","what","when","these","those","work","working","able","must","all","can","whn","not","may","role","position","team","company","year","years","job","jobs","including","strong","excellent","required","ability","experience","skills","knowledge","minimum","preferred","equivalent","responsibilities","requirements","qualifications","opportunity","¢F6æFFFW2"Â&6æFFFR"Â&Æöö¶ær"Â'6VV¶ær"Â&FVÂ"Â&Vç7W&R"Â'7W÷'B"Â'&÷fFR"Â'vFâ"Â&7&÷72"Â&&6VB"Â'&VÆFVB"Â'&VÆWfçB"Â&FVÖöç7G&FVB"Â'&÷fVâ"Â'ÇW2"Â'vVÆÂ"Â&Vçf&öæÖVçB"Â&F"Â&æWr"Â&v"Â&¶W"Â&ÆWfVÂ"Â&&÷F"Â'7V6"Â'W""Â&G2"Â&2"Â&B"Â&öæR"Â'Gvò"Â'F&VR"Â&ç"Â'W6R"Â'W6VB"Â'W6ær"Â&Ö¶R"Â&ÖFR"Â'F¶R"Â'F¶Vâ"Â&vööB"Â&w&VB"Â&æVVB"Â&æVVG2"Â&æVVFVB"Â'7Ffb"Â''B"Â&gVÆÂ"Â'FÖR"Â&FFR"Â&F2"Â&÷W'2"Â&ÖöçF"Â&ÖöçF2"Â'vVV²"Â'vVV·2"Â&WF2"Â&6æF"Â&6æFâ"Â&öçF&ò"Â'F÷&öçFò"Â'ÆV6R"Â&Ç"Â&Æö6Föâ"Â'6Æ'"Â&&VæVfG2"Â&F6&ÆG"Â&66öÖÖöFFöâ"Â&V×Æ÷ÖVçB"Â&VÖâ"Â'&vG2"Â'vÆR"Â'F&÷Vv"Â'V÷ÆR"Â&ÆfR"Â&6öÖ×VæFW2"Â&vÆö&Â"Â&V×Æ÷VW2"Â'v÷&¶f÷&6R"Â'FövWFW""Â'f6æ7"Â&öffW'2"Â&æ÷'F"Â&öffW"%Ò°¢6öç7B6CÖvWE&öÆT6B&öÆWÇÂrr°¢6öç7BEÖvWEFööÅB6BÄ5ÖvWD6W'EB6B°¢6öç7BeÕ²õÆ"ÖævVC÷ÆÆVGÆÆVGÆFWfVÆ÷VC÷Æ×ÆVÖVçFVC÷Æ6ö÷&FæFVC÷ÆæÇ¦VC÷Æ7&VFVC÷ÆFVÆfW&VC÷Ç7W÷'FVC÷ÆÖçFæVC÷Æ6öÖ×Væ6FVC÷Æ6öÆÆ&÷&FVC÷Æf6ÆFFVC÷ÆÖöæF÷&VC÷ÇG&6¶VC÷Ç&W÷'FVC÷Ç&W6VçFVC÷Ç&W&VC÷Ç&WfWvVC÷ÆWV7WFVC÷ÆÆVæ6VC÷ÆFW6væVC÷ÆVFFVC÷Ç&öGV6VC÷Æ÷FÖ¦VC÷Æ'VÇGÇÆææVC÷Ç7G&VÖÆæVC÷ÆFVçFfVC÷Æ76W76VC÷ÆWfÇVFVC÷ÆæVv÷FFVC÷ÇG&æVC÷ÆÖVçF÷&VC÷Æ6ö6VC÷ÆG&÷fWÆG&fWÇ7V&VFVC÷Æ÷fW'6s÷Æ÷fW'6VRÆ"övÓ°¢¦ö'2æf÷$V6£Óç°¢6öç7BCÖG¶¢çFFÆWÇÂrwÒG¶¢æFW67&FöçÇÂrwÖçFôÆ÷vW$66R°¢6öç7B#ÖG¶¢çFFÆWÇÂrwÒG¶¢æFW67&FöçÇÂrwÖ°¢6öç7Bs×BæÖF6õÆ%¶×¥Õ¶×¢Õ×³"ÇÕÆ"örÇÅµÓ°¢ræf÷$V6Óç¶b5ræ2bgæÆVæwFã2g&W·ÓÒg&W·×ÇÃ³·Ò°¢f÷"ÆWBÓ¶ÇræÆVæwFÓ¶²²¶6öç7B#ÖG·u¶×ÒG·u¶³×Ö¶b5ræ2u¶Òbb5ræ2u¶³Òbgu¶ÒæÆVæwFã2bgu¶³ÒæÆVæwFã2g&W¶%ÓÒg&W¶%×ÇÃ³·Ð¢eæf÷$V6Óâ"æÖF6ÇÅµÒæf÷$V6ÓÓç¶6öç7B#ÖÒçFôÆ÷vW$66R·fW&'5¶%ÓÒfW&'5¶%×ÇÃ³·Ò°¢5æf÷$V6Óâ"æÖF6ÇÅµÒæf÷$V6ÓÓç¶6W'G5¶ÒçFõWW$66RÓÒ6W'G5¶ÒçFõWW$66R×ÇÃ³·Ò°¢Eæf÷$V6Óâ"æÖF6ÇÅµÒæf÷$V6ÓÓç·FööÇ5¶ÕÓÒFööÇ5¶Õ×ÇÃ³·Ò°¢Ò°¢6öç7B6÷'CÖóÓäö&¦V7BæVçG&W2òç6÷'BÆ"Óæ%³ÒÖ³Ò°¢&WGW&ç¶g&W§6÷'Bg&WÇfW&'3§6÷'BfW&'2Æ6W'G3§6÷'B6W'G2ÇFööÇ3§6÷'BFööÇ2ÇF÷FÃ¦¦ö'2æÆVæwFÆ6FVv÷'¦6GÓ°§Ð¦gVæ7FöâFW$6öÆ÷"7B°¢b7CãÓs&WGW&ç¶6öÆ÷#¢wf"ÒÖw&VVârÆ&s¢wf"ÒÖw&VVâÖFÒrÆ&÷&FW#¢wf"ÒÖw&VVâwÓ°¢b7CãÓC&WGW&ç¶6öÆ÷#¢wf"ÒÖÆÖRrÆ&s¢r3cbrÆ&÷&FW#¢wf"ÒÖÆÖRwÓ°¢b7CãÓ#&WGW&ç¶6öÆ÷#¢wf"Ò×W'ÆRrÆ&s¢r3SrÆ&÷&FW#¢wf"Ò×W'ÆRwÓ°¢&WGW&ç¶6öÆ÷#¢wf"ÒÖ×WFVBrÆ&s¢r3CCBrÆ&÷&FW#¢wf"ÒÖ&÷&FW#"wÓ°§Ð¦gVæ7FöâÖ¶T&FvR·rÆ2ÇB¶6öç7B7CÔÖFç&÷VæB2÷B£¶6öç7G¶6öÆ÷"Æ&rÆ&÷&FW'Ó×FW$6öÆ÷"7B·&WGW&æÆFb6Æ73Ò&&FvR"7GÆSÒ&&6¶w&÷VæC¢G¶&wÓ¶&÷&FW"Ö6öÆ÷#¢G¶&÷&FW'Ò#ãÇ7â6Æ73Ò&&FvRÖ·r#âG¶·wÓÂ÷7ããÇ7â6Æ73Ò&&FvR×7B"7GÆSÒ&6öÆ÷#¢G¶6öÆ÷'Ò#âG·7GÒSÂ÷7ããÂöFcæ·Ð¦gVæ7FöâfÆÅ6V7BBÆFV×2ÇF÷FÂÆÖä3Ó¶6öç7BVÃÖFö7VÖVçBævWDVÆVÖVçD'BB¶bVÂ&WGW&ã¶VÂæææW$DÔÃÖFV×2æfÇFW"²Æ5ÒÓæ3ãÖÖä2ç6Æ6RÃCæÖ¶·rÆ5ÒÓæÖ¶T&FvR·rÆ2ÇF÷FÂæ¦öârr·Ð ¦gVæ7Föâ&VæFW%&W7VÇG2¦ö'2°¢6öç7BFFÖæÇ¦Tµr¦ö'2ÆÆ7E&öÆR°¢6öç7G¶g&WÇfW&'2Æ6W'G2ÇFööÇ2ÇF÷FÂÆ6FVv÷'ÓÖFF°¢6öç7B÷cÖFö7VÖVçBævWDVÆVÖVçD'BvæGW7G'÷fW'&FRrçfÇVS°¢Æ7DæGW7G'Ö÷bÓÒvWFòsö÷c¦6FVv÷'°¢Æ7E&W7VÇG3ÖFF¶Æ7EF÷FÃ×F÷FÃ°¢Fö7VÖVçBævWDVÆVÖVçD'BwF÷FÄ6÷VçBrçFWD6öçFVçC×F÷FÃ°¢Fö7VÖVçBævWDVÆVÖVçD'BwF÷FÄÆ&VÂrçFWD6öçFVçCÖ÷7Fæw2æÇ¦VB+ræFVVBG¶Æ7DÆö6FöçÖ°¢6öç7BCÖg&WæfÇFW"²Æ5ÒÓæ2÷F÷FÃãÒãr°¢6öç7BC#Ög&WæfÇFW"²Æ5ÒÓç¶6öç7BÖ2÷F÷FÃ·&WGW&âãÒãBbgÂãs·Ò°¢6öç7BC3Ög&WæfÇFW"²Æ5ÒÓç¶6öç7BÖ2÷F÷FÃ·&WGW&âãÒã"bgÂãC·Ò°¢6öç7BCCÖg&WæfÇFW"²Æ5ÒÓç¶6öç7BÖ2÷F÷FÃ·&WGW&âÂã"bf3ãÓ3·Ò°¢fÆÅ6V7BwFW#rÇCÇF÷FÂ¶fÆÅ6V7BwFW#"rÇC"ÇF÷FÂ¶fÆÅ6V7BwFW#2rÇC2ÇF÷FÂ¶fÆÅ6V7BwFW#BrÇCBÇF÷FÂ°¢fÆÅ6V7BwfW&'2rÇfW&'2ÇF÷FÂÃ"¶fÆÅ6V7BwFööÇ2rÇFööÇ2ÇF÷FÂÃ"¶fÆÅ6V7Bv6W'G2rÆ6W'G2ÇF÷FÂÃ°¢Fö7VÖVçBævWDVÆVÖVçD'Bw7FGW4&÷rç7GÆRæF7ÆÒvæöæRs°¢Fö7VÖVçBævWDVÆVÖVçD'Bw&W7VÇG5æVÂrç7GÆRæF7ÆÒv&Æö6²s°¢Fö7VÖVçBævWDVÆVÖVçD'Bw'Vä'FâræF6&ÆVCÖfÇ6S°¢Fö7VÖVçBævWDVÆVÖVçD'Bw6fT&"rç7GÆRæF7ÆÒvfÆWs°¢Fö7VÖVçBævWDVÆVÖVçD'Bw6fU&öÆTÆ&VÂrçFWD6öçFVçCÖÆ7E&öÆS°¢Fö7VÖVçBævWDVÆVÖVçD'Bw6fTÖWFrçFWD6öçFVçCÖG·F÷FÇÒ÷7Fæw2+rG¶Æ7DæGW7G'Ò+rG¶Æ7DÆö6FöçÖ°§Ð ¢òòÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÐ¢òò4dP¢òòÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÐ¦7æ2gVæ7Föâ6fUFôFF&6R°¢bÆ7E&W7VÇG2&WGW&ã°¢6öç7B'FãÖFö7VÖVçBævWDVÆVÖVçD'Bw6fT'Fâr°¢'FâçFWD6öçFVçCÒu6færâââs¶'FâæF6&ÆVC×G'VS°¢6öç7B&V6÷&C×¶C¤FFRææ÷rçFõ7G&ærÇ&öÆS¦Æ7E&öÆRÆÆö6Föã¦Æ7DÆö6FöâÆæGW7G'¦Æ7DæGW7G'ÇF÷FÃ¦Æ7EF÷FÂÆF4&6²ÆFFS¦æWrFFRçFô4õ7G&ærÆFF¦Æ7E&W7VÇG7Ó°¢G'°¢vBF$ç6W'B¶C§&V6÷&BæBÇ&öÆS§&V6÷&Bç&öÆRÆÆö6Föã§&V6÷&BæÆö6FöâÆæGW7G'§&V6÷&BææGW7G'ÇF÷FÃ§&V6÷&BçF÷FÂÆF5ö&6³§&V6÷&BæF4&6²ÆFFS§&V6÷&BæFFRÆFF§&V6÷&BæFFÒ°¢ÆÅ&V6÷&G2çVç6gB&V6÷&B°¢WFFTæe7FB°¢6÷uFö7B)É26fVB"G¶Æ7E&öÆWÒ"FòFF&6V°¢Fö7VÖVçBævWDVÆVÖVçD'Bw6fT&"rç7GÆRæF7ÆÒvæöæRs°¢6WE7æ4ö²°¢Ö6F6R·6÷uFö7B~)ª6fRfÆVC¢r¶RæÖW76vRÇG'VR·6WE7æ4W'"·Ð¢'FâçFWD6öçFVçCÒu6fRFòFF&6Rs¶'FâæF6&ÆVCÖfÇ6S°§Ð ¢òòÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÐ¢òò4õdõ"4ÄTDP¢òòÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÐ¦gVæ7Föâ'VÆD6ÆVFUFWB&V2°¢6öç7G¶FFÇ&öÆRÆÆö6FöâÇF÷FÂÆF4&6³¦BÆFFWÓ×&V3°¢6öç7G¶g&WÇfW&'2Æ6W'G2ÇFööÇ7ÓÖFF°¢6öç7BG3ÖFFSöæWrFFRFFRçFô4õ7G&ærç7ÆBuBr³Ó¢~(	Bs°¢6öç7Bf×CÒ'"ÆâÇBÓæ'"ç6Æ6RÆâæÖ¶²Æ5ÒÓæG¶·ÒG´ÖFç&÷VæB2÷B£ÒRæ¦öârÂr°¢&WGW&æÒÒÒ$U5TÔ5DU"E2´Utõ$B$U4T$4ÒÒÐ¥&öÆS¢G·&öÆWÐ¤Æö6Föã¢G¶Æö6FöçÐ¥÷7Fæw2æÇ¦VC¢G·F÷FÇÐ¤FFR&ævS¢Æ7BG¶GÒF0¤FFS¢G¶G7Ð ¥DU"(	B5$D4Â×W7Bæ6ÇVFRÂsR² ¢G¶f×Bg&WæfÇFW"²Æ5ÒÓæ2÷F÷FÃãÒãrÃ#ÇF÷FÂÐ ¥DU""(	BtdÅTRC(	3cR ¢G¶f×Bg&WæfÇFW"²Æ5ÒÓç¶6öç7BÖ2÷F÷FÃ·&WGW&âãÒãBbgÂãs·ÒÃ#ÇF÷FÂÐ ¥DU"2(	B5UÄTÔTåD%#(	33R ¢G¶f×Bg&WæfÇFW"²Æ5ÒÓç¶6öç7BÖ2÷F÷FÃ·&WGW&âãÒã"bgÂãC·ÒÃRÇF÷FÂÐ ¥Dõ5DôâdU$%3 ¢G¶f×BfW&'2ÃRÇF÷FÂÐ ¥DôôÅ2b4ôeEt$S ¢G¶f×BFööÇ2ÃRÇF÷FÂÐ ¤4U%E2b5$TDTåDÅ3 ¢G¶f×B6W'G2ÃÇF÷FÂÐ ¢ÒÒÒTäB´Utõ$B$U4T$4ÒÒÐ¤æ÷rW6RFR&÷fR¶Wv÷&BFFÆöærvFFR6ÆVçBæf÷&ÖFöâ&÷fFVBFòw&FRFR&W7VÖRföÆÆ÷værFRÖ7FW"&ö×Bç7G'V7Föç2æ°§Ð¦gVæ7Föâ6÷f÷$6ÆVFR¶bÆ7E&W7VÇG2&WGW&ã¶6öç7Bf¶S×¶FF¦Æ7E&W7VÇG2Ç&öÆS¦Æ7E&öÆRÆÆö6Föã¦Æ7DÆö6FöâÇF÷FÃ¦Æ7EF÷FÂÆF4&6²ÆFFS¦æWrFFRçFô4õ7G&ærÓ¶æfvF÷"æ6Æ&ö&Bçw&FUFWB'VÆD6ÆVFUFWBf¶RçFVâÓç6÷uFö7B~)É26÷VBFò6Æ&ö&Bræ6F6Óç·Ò·Ð ¢òòÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÐ¢òòä`¢òòÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÐ¦gVæ7Föâ6÷uvRB°¢Fö7VÖVçBçVW'6VÆV7F÷$ÆÂrçvRræf÷$V6Óçæ6Æ74Æ7Bç&VÖ÷fRv7FfRr°¢Fö7VÖVçBçVW'6VÆV7F÷$ÆÂrææb×F"ræf÷$V6CÓçBæ6Æ74Æ7Bç&VÖ÷fRv7FfRr°¢Fö7VÖVçBævWDVÆVÖVçD'BwvRÒr¶Bæ6Æ74Æ7BæFBv7FfRr°¢Fö7VÖVçBçVW'6VÆV7F÷$ÆÂrææb×F"ræf÷$V6CÓç¶bBçFWD6öçFVçBçFôÆ÷vW$66RÓÓÖBBæ6Æ74Æ7BæFBv7FfRr·Ò°¢bCÓÓÒvFF&6Rr&VæFW$FF&6R°¢bCÓÓÒvçFVÆÆvVæ6Rr&VæFW$çFVÆÆvVæ6R°§Ð¦gVæ7FöâWFFTæe7FB¶Fö7VÖVçBævWDVÆVÖVçD'BwF÷FÅ'Vç57FBrçFWD6öçFVçCÖÆÅ&V6÷&G2æÆVæwF·Ð¦gVæ7Föâ6WE7æ4ö²¶6öç7BCÖFö7VÖVçBævWDVÆVÖVçD'Bw7æ4F÷Br¶Bæ6Æ74æÖSÒw7æ2ÖF÷Bs¶Fö7VÖVçBævWDVÆVÖVçD'Bw7æ5FWBrçFWD6öçFVçCÒt6öææV7FVBs·Ð¦gVæ7Föâ6WE7æ4W'"¶6öç7BCÖFö7VÖVçBævWDVÆVÖVçD'Bw7æ4F÷Br¶Bæ6Æ74æÖSÒw7æ2ÖF÷BW'"s¶Fö7VÖVçBævWDVÆVÖVçD'Bw7æ5FWBrçFWD6öçFVçCÒu7æ2W'&÷"s·Ð¦gVæ7Föâ6WE7æ57æ6ær¶6öç7BCÖFö7VÖVçBævWDVÆVÖVçD'Bw7æ4F÷Br¶Bæ6Æ74æÖSÒw7æ2ÖF÷B7æ6ærs¶Fö7VÖVçBævWDVÆVÖVçD'Bw7æ5FWBrçFWD6öçFVçCÒt6öææV7Færâââs·Ð ¢òòÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÐ¢òòDD$4P¢òòÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÓÐ¦6öç7BäC×¶VÇF6&S¢tVÇF6&RrÆfææ6S¢tfææ6RrÇFV6¢uFV6æöÆöwrÆFÖã¢tFÖârÆÖ&¶WFæs¢tÖ&¶WFærrÆ#¢tVÖâ&W6÷W&6W2rÆ6öç7VÇFæs¢t6öç7VÇFærrÇG&FW3¢uG&FW2rÇ6ÆW3¢u6ÆW2rÆÆVvÃ¢tÆVvÂrÆvVæW&Ã¢tvVæW&ÂwÓ°¦gVæ7FöâfÇFW%&V6÷&G2b¶7W'&VçE6V&6×c·&VæFW$FF&6R·Ð¦gVæ7FöâfÇFW$'æGW7G'b¶7W'&VçDfÇFW#×c·&VæFW$FF&6R·Ð¦gVæ7FöâfÇFW$'æGW7G'6Æ6²æB¶Fö7VÖVçBævWDVÆVÖVçD'BvæGW7G'fÇFW"rçfÇVSÖæC¶7W'&VçDfÇFW#ÖæC·&VæFW$FF&6R·Ð¦gVæ7Föâ&VæFW$FF&6R°¢ÆWB&V73ÖÆÅ&V6÷&G3°¢b7W'&VçDfÇFW"&V73×&V72æfÇFW"#Óç"ææGW7G'ÓÓÖ7W'&VçDfÇFW"°¢b7W'&VçE6V&6&V73×&V72æfÇFW"#Óç"ç&öÆRçFôÆ÷vW$66Rææ6ÇVFW27W'&VçE6V&6çFôÆ÷vW$66R°¢6öç7B'æC×·Ó°¢  allRecords.forEach(r=>{if(!byInd[r.industry])byInd[r.industry]={count:0,roles:[]};byInd[r.industry].count++;if(!byInd[r.industry].roles.includes(r.role))byInd[r.industry].roles.push(r.role);});
   const cards=Object.entries(byInd).map(([ind,info])=>`<div class="industry-card" data-industry="${ind}" onclick="filterByIndustryClick('${ind}')"><div class="ic-top"><div class="ic-name">${IND[ind]||ind}</div><div style="text-align:right"><div class="ic-count">${info.count}</div><div class="ic-count-label">scrapes</div></div></div><div class="ic-roles">${info.roles.slice(0,5).map(r=>`<span class="ic-role-chip">${r}</span>`).join('')}${info.roles.length>5?`<span class="ic-role-chip">+${info.roles.length-5} more</span>`:''}</div><div class="ic-meta">${info.roles.length} unique roles</div></div>`).join('');
   document.getElementById('industryCardsSection').innerHTML=Object.keys(byInd).length?`<div style="font-size:10px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-bottom:12px;">By Industry</div><div class="industry-grid">${cards}</div>`:'';
   const listEl=document.getElementById('recordsList');
-  if(!recs.length){listEl.innerHTML=`<div class="empty-state"><div class="empty-icon">🗂️</div><div class="empty-text">No records found</div><div class="empty-sub">Run a scrape and save it to start building your database</div></div>`;return;}
+  if(!recs.length){listEl.innerHTML=`<div class="empty-state"><div class="empty-icon">ðï¸</div><div class="empty-text">No records found</div><div class="empty-sub">Run a scrape and save it to start building your database</div></div>`;return;}
   listEl.innerHTML=recs.map(r=>`<div class="record-row" onclick="openRecord('${r.id}')"><div class="rr-industry ind-${r.industry}">${(IND[r.industry]||r.industry).toUpperCase()}</div><div class="rr-role">${r.role}</div><div class="rr-postings">${r.total} postings</div><div class="rr-date">${new Date(r.date).toLocaleDateString('en-CA')}</div><button class="rr-delete" onclick="event.stopPropagation();deleteRecord('${r.id}')">Delete</button></div>`).join('');
 }
 async function deleteRecord(id){
   try{await dbDelete(id);allRecords=allRecords.filter(r=>r.id!==id);renderDatabase();updateNavStat();showToast('Record deleted');}
-  catch(e){showToast('⚠ Delete failed',true);}
+  catch(e){showToast('â  Delete failed',true);}
 }
 
 // ============================================================
@@ -623,18 +545,18 @@ function openRecord(id){
   const rec=allRecords.find(r=>r.id===id);if(!rec)return;
   currentModalId=id;
   document.getElementById('modalTitle').textContent=rec.role;
-  document.getElementById('modalMeta').textContent=`${IND[rec.industry]||rec.industry} · ${rec.total} postings · ${rec.location} · ${new Date(rec.date).toLocaleDateString('en-CA')}`;
+  document.getElementById('modalMeta').textContent=`${IND[rec.industry]||rec.industry} Â· ${rec.total} postings Â· ${rec.location} Â· ${new Date(rec.date).toLocaleDateString('en-CA')}`;
   document.getElementById('modalCopyArea').style.display='none';
   document.getElementById('modalCopyArea').textContent=buildClaudeText(rec);
   const{freq,verbs,certs,tools}=rec.data;const t=rec.total;
   const t1=freq.filter(([,c])=>c/t>=.7),t2=freq.filter(([,c])=>{const p=c/t;return p>=.4&&p<.7;}),t3=freq.filter(([,c])=>{const p=c/t;return p>=.2&&p<.4;}),t4=freq.filter(([,c])=>{const p=c/t;return p<.2&&c>=3;});
   const mkB=arr=>arr.slice(0,40).map(([kw,c])=>makeBadge(kw,c,t)).join('');
-  document.getElementById('modalBody').innerHTML=`<div class="kw-section"><div class="kw-section-title" style="color:var(--green)">Tier 1 — Critical</div><div class="badges">${mkB(t1)}</div></div><div class="kw-section"><div class="kw-section-title" style="color:var(--lime)">Tier 2 — High Value</div><div class="badges">${mkB(t2)}</div></div><div class="kw-section"><div class="kw-section-title" style="color:var(--purple)">Tier 3 — Supplementary</div><div class="badges">${mkB(t3)}</div></div><div class="kw-section"><div class="kw-section-title" style="color:var(--muted2)">Tier 4 — Emerging</div><div class="badges">${mkB(t4)}</div></div><div class="bottom-grid"><div class="kw-section"><div class="kw-section-title" style="color:var(--amber)">Action Verbs</div><div class="badges">${verbs.slice(0,20).map(([kw,c])=>makeBadge(kw,c,t)).join('')}</div></div><div class="kw-section"><div class="kw-section-title" style="color:var(--sky)">Tools & Software</div><div class="badges">${tools.slice(0,20).map(([kw,c])=>makeBadge(kw,c,t)).join('')}</div></div><div class="kw-section"><div class="kw-section-title" style="color:var(--pink)">Certs & Credentials</div><div class="badges">${certs.slice(0,20).map(([kw,c])=>makeBadge(kw,c,t)).join('')}</div></div></div>`;
+  document.getElementById('modalBody').innerHTML=`<div class="kw-section"><div class="kw-section-title" style="color:var(--green)'>Tier 1 â Critical</div><div class="badges">${mkB(t1)}</div></div><div class="kw-section"><div class="kw-section-title" style="color:var(--lime)">Tier 2 â High Value</div><div class="badges">${mkB(t2)}</div></div><div class="kw-section"><div class="kw-section-title" style="color:var(--purple)">Tier 3 â Supplementary</div><div class="badges">${mkB(t3)}</div></div><div class="kw-section"><div class="kw-section-title" style="color:var(--muted2)">Tier 4 â Emerging</div><div class="badges">${mkB(t4)}</div></div><div class="bottom-grid"><div class="kw-section"><div class="kw-section-title" style="color:var(--amber)">Action Verbs</div><div class="badges">${verbs.slice(0,20).map(([kw,c])=>makeBadge(kw,c,t)).join('')}</div></div><div class="kw-section"><div class="kw-section-title" style="color:var(--sky)">Tools & Software</div><div class="badges">${tools.slice(0,20).map(([kw,c])=>makeBadge(kw,c,t)).join('')}</div></div><div class="kw-section"><div class="kw-section-title" style="color:var(--pink)">Certs & Credentials</div><div class="badges">${certs.slice(0,20).map(([kw,c])=>makeBadge(kw,c,t)).join('')}</div></div></div>`;
   document.getElementById('modalOverlay').classList.add('open');
 }
 function closeModal(e){if(!e||e.target===document.getElementById('modalOverlay'))document.getElementById('modalOverlay').classList.remove('open');}
 function toggleCopyArea(){const el=document.getElementById('modalCopyArea');el.style.display=el.style.display==='none'?'block':'none';}
-function copyModalForClaude(){const rec=allRecords.find(r=>r.id===currentModalId);if(!rec)return;navigator.clipboard.writeText(buildClaudeText(rec)).then(()=>showToast('✓ Copied to clipboard')).catch(()=>{});}
+function copyModalForClaude(){const rec=allRecords.find(r=>r.id===currentModalId);if(!rec)return;navigator.clipboard.writeText(buildClaudeText(rec)).then(()=>showToast('â Copied to clipboard')).catch(()=>{});}
 async function deleteCurrentRecord(){if(!currentModalId)return;await deleteRecord(currentModalId);document.getElementById('modalOverlay').classList.remove('open');}
 
 // ============================================================
@@ -645,14 +567,14 @@ function renderIntelligence(){
   document.getElementById('intelEmpty').style.display='none';
   const byInd={};
   allRecords.forEach(r=>{if(!byInd[r.industry])byInd[r.industry]={count:0,postings:0};byInd[r.industry].count++;byInd[r.industry].postings+=r.total||0;});
-  document.getElementById('intelBreakdown').innerHTML=`<div style="font-size:10px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-bottom:12px;">Coverage by Industry</div><div class="industry-breakdown">${Object.entries(byInd).map(([ind,d])=>`<div class="ib-card"><div class="ib-name ind-${ind}">${(IND[ind]||ind).toUpperCase()}</div><div class="ib-num">${d.count}</div><div class="ib-sub">${d.postings.toLocaleString()} postings total</div></div>`).join('')}</div>`;
+  document.getElementById('intelBreakdown').innerHTML<`<div style="font-size:10px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-bottom:12px;">Coverage by Industry</div><div class="industry-breakdown">${Object.entries(byInd).map(([ind,d])=>`<div class="ib-card"><div class="ib-name ind-${ind}">${(IND[ind]||ind).toUpperCase()}</div><div class="ib-num">${d.count}</div><div class="ib-sub">${d.postings.toLocaleString()} postings total</div></div>`).join('')}</div>`;
   document.getElementById('intelGrid').innerHTML=Object.entries(byInd).map(([ind,info])=>{
     const recs=allRecords.filter(r=>r.industry===ind);
     const merged={};let tp=0;
     recs.forEach(r=>{tp+=r.total||0;r.data.freq.forEach(([kw,c])=>{merged[kw]=(merged[kw]||0)+c;});});
     const sorted=Object.entries(merged).sort((a,b)=>b[1]-a[1]).slice(0,12);
     const max=sorted[0]?.[1]||1;
-    return`<div class="intel-card"><div class="intel-card-title ind-${ind}">${(IND[ind]||ind).toUpperCase()} — TOP KEYWORDS</div><div style="font-size:9px;color:var(--muted);margin-bottom:12px;">${info.count} scrapes · ${tp.toLocaleString()} postings</div>${sorted.map(([kw,c],i)=>`<div class="kw-rank-row"><div class="kw-rank-num">${i+1}</div><div class="kw-rank-word">${kw}</div><div class="kw-rank-bar-wrap"><div class="kw-rank-bar" style="width:${Math.round(c/max*100)}%"></div></div><div class="kw-rank-count">${c}</div></div>`).join('')}</div>`;
+    return`<div class="intel-card"><div class="intel-card-title ind-${ind}">${(IND[ind]||ind).toUpperCase()} â TOP KEYWORDS</div><div style="font-size:9px;color:var(--muted);margin-bottom:12px;">${info.count} scrapes Â· ${tp.toLocaleString()} postings</div>${sorted.map(([kw,c],i)=>`<div class="kw-rank-row"><div class="kw-rank-num">${i+1}</div><div class="kw-rank-word">${kw}</div><div class="kw-rank-bar-wrap"><div class="kw-rank-bar" style="width:${Math.round(c/max*100)}%"></div></div><div class="kw-rank-count">${c}</div></div>`).join('')}</div>`;
   }).join('');
 }
 
@@ -663,7 +585,7 @@ let toastTimer=null;
 function showToast(msg,err=false){const t=document.getElementById('toast');t.textContent=msg;t.className='toast'+(err?' err':'');t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2500);}
 
 // ============================================================
-// INIT — fetch Apify key + all records from Supabase
+// INIT â fetch Apify key + all records from Supabase
 // ============================================================
 async function init(){
   setSyncSyncing();
@@ -674,7 +596,10 @@ async function init(){
       APIFY_KEY=cfg[0].value;
       document.getElementById('runBtn').disabled=false;
     } else {
-      throw new Error('Apify key not found in config');
+      // Key missing â show the input panel so user can set a new one
+      document.getElementById('apikeyPanel').style.display='block';
+      document.getElementById('apikeyPanel').querySelector('.apikey-panel-title').textContent='â  Apify API Key Not Found';
+      showToast('â  Apify key missing â paste your new key below',true);
     }
     // Load all scrape records
     const rows=await dbGetAll();
@@ -683,7 +608,7 @@ async function init(){
     setSyncOk();
   }catch(e){
     setSyncErr();
-    showToast('⚠ Could not connect to Supabase',true);
+    showToast('â  Could not connect to Supabase',true);
   }
 }
 
