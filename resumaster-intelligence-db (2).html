@@ -150,16 +150,13 @@ select option{background:var(--bg);}
 .toast{position:fixed;bottom:24px;right:24px;background:var(--green-dim);border:1px solid var(--green);border-radius:6px;padding:12px 20px;font-size:11px;color:var(--green);z-index:300;opacity:0;transform:translateY(10px);transition:all .2s;pointer-events:none;}
 .toast.show{opacity:1;transform:translateY(0);}
 .toast.err{background:#1a0a0a;border-color:var(--red);color:var(--red);}
-/* API KEY PANEL */
-.apikey-panel{background:#1a0f00;border:1px solid var(--amber);border-radius:8px;padding:20px;margin-top:16px;}
-.apikey-panel-title{font-size:9px;letter-spacing:3px;color:var(--amber);text-transform:uppercase;margin-bottom:12px;}
-.apikey-row{display:flex;gap:8px;align-items:center;}
-.apikey-row input{flex:1;}
-.btn-amber{padding:9px 16px;background:var(--amber);color:#000;border:none;border-radius:4px;font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:11px;letter-spacing:1px;cursor:pointer;text-transform:uppercase;white-space:nowrap;}
-.btn-amber:hover{background:#d97706;}
-.apikey-hint{font-size:9px;color:var(--muted);margin-top:8px;line-height:1.6;}
-.apikey-update-btn{margin-top:16px;width:100%;padding:9px;background:transparent;color:var(--muted2);border:1px solid var(--border2);border-radius:4px;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1px;cursor:pointer;text-transform:uppercase;transition:all .15s;}
-.apikey-update-btn:hover{border-color:var(--amber);color:var(--amber);}
+/* BACKUP BUTTONS */
+.backup-bar{display:flex;gap:10px;padding:14px 32px;border-bottom:1px solid var(--border);background:var(--surface);align-items:center;}
+.backup-bar-label{font-size:9px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-right:6px;}
+.btn-sky{padding:8px 16px;background:transparent;color:var(--sky);border:1px solid var(--sky);border-radius:4px;font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:10px;letter-spacing:1px;cursor:pointer;text-transform:uppercase;transition:all .15s;}
+.btn-sky:hover{background:rgba(56,189,248,.1);}
+.btn-outline-sm{padding:8px 16px;background:transparent;color:var(--muted2);border:1px solid var(--border2);border-radius:4px;font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:10px;letter-spacing:1px;cursor:pointer;text-transform:uppercase;transition:all .15s;}
+.btn-outline-sm:hover{border-color:var(--muted2);color:var(--text);}
 @media(max-width:900px){.scraper-layout{grid-template-columns:1fr;}.intel-grid{grid-template-columns:1fr;}.bottom-grid{grid-template-columns:1fr;}}
 </style>
 </head>
@@ -183,6 +180,14 @@ select option{background:var(--bg);}
     </div>
   </div>
 </nav>
+
+<!-- BACKUP BAR -->
+<div class="backup-bar">
+  <span class="backup-bar-label">Data</span>
+  <button class="btn-sky" onclick="exportData()">⬇ Export JSON</button>
+  <button class="btn-outline-sm" onclick="document.getElementById('importInput').click()">⬆ Import JSON</button>
+  <input type="file" id="importInput" accept=".json" style="display:none" onchange="importData(this)"/>
+</div>
 
 <!-- SCRAPER -->
 <div class="page active" id="page-scraper">
@@ -235,22 +240,7 @@ select option{background:var(--bg);}
             <button class="chip" onclick="setDays(180)">180 days</button>
           </div>
         </div>
-        <button class="run-btn" id="runBtn" onclick="runScrape()" disabled>▶ RUN SCRAPE + ANALYZE</button>
-        <!-- Update API Key (always accessible) -->
-        <button class="apikey-update-btn" onclick="toggleKeyPanel()">⚙ Update Apify API Key</button>
-      </div>
-
-      <!-- API KEY PANEL — shown on error or on demand -->
-      <div class="apikey-panel" id="apikeyPanel" style="display:none;">
-        <div class="apikey-panel-title">⚠ Apify API Key Required</div>
-        <div class="apikey-row">
-          <input type="password" id="apifyKeyInput" placeholder="Paste your Apify API token..."/>
-          <button class="btn-amber" onclick="saveApifyKey()">Save Key</button>
-        </div>
-        <div class="apikey-hint">
-          Get your token at <strong>apify.com → Settings → Integrations → API tokens</strong><br/>
-          The key is saved securely to your Supabase config table — never stored in the repo.
-        </div>
+        <button class="run-btn" id="runBtn" onclick="runScrape()">▶ RUN SCRAPE + ANALYZE</button>
       </div>
 
       <div class="status-box status-ok" id="statusBox"><span class="pulse"></span><span id="statusText"></span></div>
@@ -368,9 +358,9 @@ select option{background:var(--bg);}
 const SB_URL='https://eevxcwthbzgemowoupab.supabase.co';
 const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVldnhjd3RoYnpnZW1vd291cGFiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwODMyNjcsImV4cCI6MjA4ODY1OTI2N30.7J38XtgcpT5DAwyFps4frBXkxBqPv6JGIjUWKLOsQLU';
 const TBL='scrape_runs';
-const CFG='app_config';
-
-let APIFY_KEY=''; // loaded from Supabase at init
+// Edge function endpoints — Apify key lives server-side in Supabase secrets
+const FN_START=`${SB_URL}/functions/v1/start-scrape`;
+const FN_STATUS=`${SB_URL}/functions/v1/scrape-status`;
 
 async function sbReq(path,opts={}){
   const r=await fetch(`${SB_URL}/rest/v1/${path}`,{
@@ -385,35 +375,46 @@ async function sbReq(path,opts={}){
 const dbGetAll=()=>sbReq(`${TBL}?order=date.desc`);
 const dbInsert=row=>sbReq(TBL,{method:'POST',prefer:'return=minimal',body:JSON.stringify(row)});
 const dbDelete=id=>sbReq(`${TBL}?id=eq.${id}`,{method:'DELETE'});
-const dbGetConfig=key=>sbReq(`${CFG}?key=eq.${key}&select=value`);
-const dbUpsertConfig=(key,value)=>sbReq(CFG,{method:'POST',prefer:'resolution=merge-duplicates,return=minimal',body:JSON.stringify({key,value})});
 
 // ============================================================
-// API KEY MANAGEMENT
+// EXPORT / IMPORT
 // ============================================================
-function toggleKeyPanel(){
-  const p=document.getElementById('apikeyPanel');
-  p.style.display=p.style.display==='none'?'block':'none';
+async function exportData(){
+  showToast('⏳ Fetching all records...');
+  try{
+    const rows=await dbGetAll();
+    if(!rows||!rows.length){showToast('⚠ No records to export',true);return;}
+    const ts=new Date().toISOString().slice(0,10);
+    const blob=new Blob([JSON.stringify(rows,null,2)],{type:'application/json'});
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download=`resumaster-backup-${ts}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    showToast(`✓ Exported ${rows.length} records`);
+  }catch(e){showToast('⚠ Export failed: '+e.message,true);}
 }
 
-async function saveApifyKey(){
-  const val=document.getElementById('apifyKeyInput').value.trim();
-  if(!val){showToast('⚠ Please paste your Apify API token',true);return;}
-  const btn=document.querySelector('#apikeyPanel .btn-amber');
-  btn.textContent='Saving...';btn.disabled=true;
+async function importData(input){
+  const file=input.files[0];
+  if(!file)return;
+  input.value='';
+  showToast('⏳ Reading file...');
   try{
-    await dbUpsertConfig('apify_token',val);
-    APIFY_KEY=val;
-    document.getElementById('runBtn').disabled=false;
-    document.getElementById('apikeyPanel').style.display='none';
-    document.getElementById('apifyKeyInput').value='';
-    setSyncOk();
-    showToast('✓ Apify key saved — scraper is ready');
-    document.getElementById('errorBox').style.display='none';
-  }catch(e){
-    showToast('⚠ Failed to save key: '+e.message,true);
-  }
-  btn.textContent='Save Key';btn.disabled=false;
+    const text=await file.text();
+    const rows=JSON.parse(text);
+    if(!Array.isArray(rows)||!rows.length){showToast('⚠ Invalid or empty JSON array',true);return;}
+    let ok=0,skip=0;
+    for(const row of rows){
+      // Strip id so Supabase generates a new one (avoids conflict)
+      const {id,...rest}=row;
+      try{await dbInsert(rest);ok++;}catch(e){skip++;}
+    }
+    const allRows=await dbGetAll();
+    allRecords=(allRows||[]).map(r=>({id:r.id,role:r.role,location:r.location,industry:r.industry,total:r.total,daysBack:r.days_back,date:r.date,data:r.data}));
+    updateNavStat();renderDB();renderIntelligence();
+    showToast(`✓ Imported ${ok} records${skip?` (${skip} skipped)`:''}`)
+  }catch(e){showToast('⚠ Import failed: '+e.message,true);}
 }
 
 // ============================================================
@@ -434,7 +435,6 @@ function setError(m){const e=document.getElementById('errorBox');e.style.display
 function clearMsg(){document.getElementById('statusBox').style.display='none';document.getElementById('errorBox').style.display='none';}
 
 async function runScrape(){
-  if(!APIFY_KEY){setError('Apify key not loaded. Use the ⚙ Update Apify API Key button below.');document.getElementById('apikeyPanel').style.display='block';return;}
   const role=document.getElementById('role').value.trim();
   const loc=document.getElementById('location').value.trim();
   if(!role){setError('Please enter a target role.');return;}
@@ -442,16 +442,18 @@ async function runScrape(){
   document.getElementById('runBtn').disabled=true;
   document.getElementById('saveBar').style.display='none';
   document.getElementById('resultsPanel').style.display='none';
-  setStatus('Starting Apify Indeed scraper...');
+  setStatus('Starting Apify Indeed scraper via secure proxy...');
   attempts=0;lastRole=role;lastLocation=loc;
   try{
-    const res=await fetch(`https://api.apify.com/v2/acts/misceres~indeed-scraper/runs?token=${APIFY_KEY}`,{
-      method:'POST',headers:{'Content-Type':'application/json'},
+    // Call Supabase Edge Function — Apify key never touches the browser
+    const res=await fetch(FN_START,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SB_KEY,'Authorization':`Bearer ${SB_KEY}`},
       body:JSON.stringify({position:role,country:'CA',location:loc,maxItems:maxJobs,saveOnlyUniqueItems:true,fromAge:daysBack})
     });
     const d=await res.json();
-    if(!res.ok||!d?.data?.id)throw new Error(d?.error?.message||'Failed to start. Check your Apify key.');
-    pollRun(d.data.id);
+    if(!res.ok||!d?.runId)throw new Error(d?.error||'Failed to start scrape. Ensure the start-scrape Edge Function is deployed.');
+    pollRun(d.runId);
   }catch(e){setError(e.message);document.getElementById('runBtn').disabled=false;}
 }
 
@@ -459,20 +461,21 @@ async function pollRun(runId){
   attempts++;
   setStatus(`Scraping Indeed... attempt ${attempts}/40`);
   try{
-    const r=await fetch(`https://api.apify.com/v2/actor-runs/${runId}?token=${APIFY_KEY}`);
+    // Poll via Edge Function — Apify key stays server-side
+    const r=await fetch(`${FN_STATUS}?runId=${runId}`,{
+      headers:{'apikey':SB_KEY,'Authorization':`Bearer ${SB_KEY}`}
+    });
     const d=await r.json();
-    const s=d?.data?.status;
+    const s=d?.status;
     if(s==='SUCCEEDED'){
-      setStatus('Fetching job data...');
-      const ir=await fetch(`https://api.apify.com/v2/datasets/${d.data.defaultDatasetId}/items?token=${APIFY_KEY}&limit=200`);
-      const jobs=await ir.json();
+      const jobs=d.items||[];
       setStatus(`Analyzing ${jobs.length} postings...`);
       renderResults(jobs);
     }else if(['FAILED','ABORTED','TIMED-OUT'].includes(s)){
       setError(`Run ${s}.`);document.getElementById('runBtn').disabled=false;
     }else if(attempts>=40){
       setError('Timed out.');document.getElementById('runBtn').disabled=false;
-    }else setTimeout(()=>pollRun(runId),5000);
+    }else setTimeout(()=>pollRun(runId),30000);
   }catch(e){setError(e.message);document.getElementById('runBtn').disabled=false;}
 }
 
@@ -684,7 +687,7 @@ function openRecord(id){
   const{freq,verbs,certs,tools}=rec.data;const t=rec.total;
   const t1=freq.filter(([,c])=>c/t>=.7),t2=freq.filter(([,c])=>{const p=c/t;return p>=.4&&p<.7;}),t3=freq.filter(([,c])=>{const p=c/t;return p>=.2&&p<.4;}),t4=freq.filter(([,c])=>{const p=c/t;return p<.2&&c>=3;});
   const mkB=arr=>arr.slice(0,40).map(([kw,c])=>makeBadge(kw,c,t)).join('');
-  document.getElementById('modalBody').innerHTML=`<div class="kw-section"><div class="kw-section-title" style="color:var(--green)(">Tier 1 — Critical</div><div class="badges">${mkB(t1)}</div></div><div class="kw-section"><div class="kw-section-title" style="color:var(--lime)">Tier 2 — High Value</div><div class="badges">${mkB(t2)}</div></div><div class="kw-section"><div class="kw-section-title" style="color:var(--purple)">Tier 3 — Supplementary</div><div class="badges">${mkB(t3)}</div></div><div class="kw-section"><div class="kw-section-title" style="color:var(--muted2)">Tier 4 �jb�[Emerging</div><div class="badges">${mkB(t4)}</div></div><div class="bottom-grid"><div class="kw-section"><div class="kw-section-title" style="color:var(--amber)">Action Verbs</div><div class="badges">${verbs.slice(0,20).map(([kw,c])=>makeBadge(kw,c,t)).join('')}</div></div><div class="kw-section"><div class="kw-section-title" style="color:var(--sky)">Tools & Software</div><div class="badges">${tools.slice(0,20).map(([kw,c])=>makeBadge(kw,c,t)).join('')}</div></div><div class="kw-section"><div class="kw-section-title" style="color:var(--pink)">Certs & Credentials</div><div class="badges">${certs.slice(0,20).map(([kw,c])=>makeBadge(kw,c,t)).join('')}</div></div></div>`;
+  document.getElementById('modalBody').innerHTML=`<div class="kw-section"><div class="kw-section-title" style="color:var(--green)">Tier 1 — Critical</div><div class="badges">${mkB(t1)}</div></div><div class="kw-section"><div class="kw-section-title" style="color:var(--lime)">Tier 2 — High Value</div><div class="badges">${mkB(t2)}</div></div><div class="kw-section"><div class="kw-section-title" style="color:var(--purple)">Tier 3 — Supplementary</div><div class="badges">${mkB(t3)}</div></div><div class="kw-section"><div class="kw-section-title" style="color:var(--muted2)">Tier 4 — Emerging</div><div class="badges">${mkB(t4)}</div></div><div class="bottom-grid"><div class="kw-section"><div class="kw-section-title" style="color:var(--amber)">Action Verbs</div><div class="badges">${verbs.slice(0,20).map(([kw,c])=>makeBadge(kw,c,t)).join('')}</div></div><div class="kw-section"><div class="kw-section-title" style="color:var(--sky)">Tools & Software</div><div class="badges">${tools.slice(0,20).map(([kw,c])=>makeBadge(kw,c,t)).join('')}</div></div><div class="kw-section"><div class="kw-section-title" style="color:var(--pink)">Certs & Credentials</div><div class="badges">${certs.slice(0,20).map(([kw,c])=>makeBadge(kw,c,t)).join('')}</div></div></div>`;
   document.getElementById('modalOverlay').classList.add('open');
 }
 function closeModal(e){if(!e||e.target===document.getElementById('modalOverlay'))document.getElementById('modalOverlay').classList.remove('open');}
@@ -700,7 +703,7 @@ function renderIntelligence(){
   document.getElementById('intelEmpty').style.display='none';
   const byInd={};
   allRecords.forEach(r=>{if(!byInd[r.industry])byInd[r.industry]={count:0,postings:0};byInd[r.industry].count++;byInd[r.industry].postings+=r.total||0;});
-  document.getElementById('intelBreakdown').innerHTML<`<div style="font-size:10px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-bottom:12px;">Coverage by Industry</div><div class="industry-breakdown">${Object.entries(byInd).map(([ind,d])=>`<div class="ib-card"><div class="ib-name ind-${ind}">${(IND[ind]||ind).toUpperCase()}</div><div class="ib-num">${d.count}</div><div class="ib-sub">${d.postings.toLocaleString()} postings total</div></div>`).join('')}</div>`;
+  document.getElementById('intelBreakdown').innerHTML=`<div style="font-size:10px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-bottom:12px;">Coverage by Industry</div><div class="industry-breakdown">${Object.entries(byInd).map(([ind,d])=>`<div class="ib-card"><div class="ib-name ind-${ind}">${(IND[ind]||ind).toUpperCase()}</div><div class="ib-num">${d.count}</div><div class="ib-sub">${d.postings.toLocaleString()} postings total</div></div>`).join('')}</div>`;
   document.getElementById('intelGrid').innerHTML=Object.entries(byInd).map(([ind,info])=>{
     const recs=allRecords.filter(r=>r.industry===ind);
     const merged={};let tp=0;
@@ -718,23 +721,11 @@ let toastTimer=null;
 function showToast(msg,err=false){const t=document.getElementById('toast');t.textContent=msg;t.className='toast'+(err?' err':'');t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2500);}
 
 // ============================================================
-// INIT — fetch Apify key + all records from Supabase
+// INIT — load all records from Supabase (Apify key is server-side)
 // ============================================================
 async function init(){
   setSyncSyncing();
   try{
-    // Load Apify key from Supabase config table
-    const cfg=await dbGetConfig('apify_token');
-    if(cfg&&cfg[0]&&cfg[0].value){
-      APIFY_KEY=cfg[0].value;
-      document.getElementById('runBtn').disabled=false;
-    } else {
-      // Key missing — show the input panel so user can set a new one
-      document.getElementById('apikeyPanel').style.display='block';
-      document.getElementById('apikeyPanel').querySelector('.apikey-panel-title').textContent='⚠ Apify API Key Not Found';
-      showToast('⚠ Apify key missing — paste your new key below',true);
-  	 }
-    // Load all scrape records
     const rows=await dbGetAll();
     allRecords=(rows||[]).map(r=>({id:r.id,role:r.role,location:r.location,industry:r.industry,total:r.total,daysBack:r.days_back,date:r.date,data:r.data}));
     updateNavStat();
