@@ -539,6 +539,7 @@ function analyzeKW(jobs,role){
     const w=t.match(/\b[a-z][a-z-]{2,}\b/g)||[];
     w.forEach(x=>{if(!SW.has(x)&&x.length>3)freq[x]=(freq[x]||0)+1;});
     for(let i=0;i<w.length-1;i++){const b=`${w[i]} ${w[i+1]}`;if(!SW.has(w[i])&&!SW.has(w[i+1])&&w[i].length>3&&w[i+1].length>3)freq[b]=(freq[b]||0)+1;}
+    for(let i=0;i<w.length-2;i++){const b=`${w[i]} ${w[i+1]} ${w[i+2]}`;if(!SW.has(w[i])&&!SW.has(w[i+1])&&!SW.has(w[i+2])&&w[i].length>3&&w[i+1].length>3&&w[i+2].length>3)freq[b]=(freq[b]||0)+1;}
     VP.forEach(p=>(r.match(p)||[]).forEach(m=>{const b=m.toLowerCase();verbs[b]=(verbs[b]||0)+1;}));
     CP.forEach(p=>(r.match(p)||[]).forEach(m=>{certs[m.toUpperCase()]=(certs[m.toUpperCase()]||0)+1;}));
     TP.forEach(p=>(r.match(p)||[]).forEach(m=>{tools[m]=(tools[m]||0)+1;}));
